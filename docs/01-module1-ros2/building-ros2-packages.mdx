@@ -1,0 +1,191 @@
+---
+id: building-ros2-packages
+title: Building ROS 2 Packages
+sidebar_position: 2
+slug: /01-module1-ros2/building-ros2-packages
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Creating and Building ROS 2 Python Packages
+
+Now that you understand the core concepts of ROS 2, it's time to get hands-on and build your own package. A ROS 2 **package** is a directory containing your nodes, launch files, and configuration. It's the standard way to organize your code.
+
+In this tutorial, we will create a simple Python package with a publisher and a subscriber node.
+
+### Step 1: Create a ROS 2 Workspace
+
+A **workspace** is a directory where you store and build your ROS 2 packages.
+
+1.  Create a directory for your workspace and a `src` folder inside it. The `src` folder is where your package source code will live.
+    ```bash
+    mkdir -p ros2_ws/src
+    cd ros2_ws
+    ```
+
+### Step 2: Create a New Python Package
+
+We'll use the `ros2 pkg create` command to generate a skeleton for our Python package.
+
+1.  Navigate into the `src` directory.
+    ```bash
+    cd src
+    ```
+2.  Create a new package named `my_first_package`.
+    ```bash
+    ros2 pkg create --build-type ament_python --node-name my_publisher my_first_package
+    ```
+    -   `--build-type ament_python`: Specifies that this is a Python package.
+    -   `--node-name my_publisher`: Creates a sample executable script for a node named `my_publisher`.
+
+### Step 3: Explore the Package Structure
+
+Your new package will have the following structure:
+
+```text
+my_first_package/
+├── my_first_package/
+│   ├── __init__.py
+│   └── my_publisher.py
+├── package.xml
+├── setup.cfg
+├── setup.py
+└── resource/
+    └── my_first_package
+```
+
+| File              | Purpose                                                                                             |
+| ----------------- | --------------------------------------------------------------------------------------------------- |
+| `package.xml`     | Contains meta-information about the package, such as its name, version, and dependencies.         |
+| `setup.py`        | The Python build script. It specifies how to install your package and where to find its executables.|
+| `setup.cfg`       | Configuration for `setup.py`, pointing to your executable scripts.                                  |
+| `my_publisher.py` | The auto-generated Python script for your ROS 2 node.                                               |
+
+### Step 4: Write the Publisher and Subscriber Nodes
+
+Let's modify the generated file to create a publisher and add a new file for our subscriber.
+
+<Tabs>
+  <TabItem value="publisher" label="my_first_package/my_publisher.py">
+    ```python
+    import rclpy
+    from rclpy.node import Node
+    from std_msgs.msg import String
+
+    class MyPublisherNode(Node):
+        def __init__(self):
+            super().__init__('my_publisher_node')
+            self.publisher_ = self.create_publisher(String, 'chatter', 10)
+            self.timer = self.create_timer(1.0, self.timer_callback)
+            self.counter = 0
+            self.get_logger().info('Publisher has been started.')
+
+        def timer_callback(self):
+            msg = String()
+            msg.data = f'Hello from my_first_package! Message #{self.counter}'
+            self.publisher_.publish(msg)
+            self.get_logger().info(f'Publishing: "{msg.data}"')
+            self.counter += 1
+
+    def main(args=None):
+        rclpy.init(args=args)
+        node = MyPublisherNode()
+        rclpy.spin(node)
+        rclpy.shutdown()
+
+    if __name__ == '__main__':
+        main()
+    ```
+  </TabItem>
+  <TabItem value="subscriber" label="my_first_package/my_subscriber.py">
+    ```python
+    import rclpy
+    from rclpy.node import Node
+    from std_msgs.msg import String
+
+    class MySubscriberNode(Node):
+        def __init__(self):
+            super().__init__('my_subscriber_node')
+            self.subscription = self.create_subscription(
+                String,
+                'chatter',
+                self.listener_callback,
+                10)
+            self.get_logger().info('Subscriber has been started.')
+
+        def listener_callback(self, msg):
+            self.get_logger().info(f'I heard: "{msg.data}"')
+
+    def main(args=None):
+        rclpy.init(args=args)
+        node = MySubscriberNode()
+        rclpy.spin(node)
+        rclpy.shutdown()
+
+    if __name__ == '__main__':
+        main()
+    ```
+  </TabItem>
+</Tabs>
+
+### Step 5: Update `setup.py` to Include the New Node
+
+We need to tell the build system about our new `my_subscriber` node so it can be found and executed.
+
+Open `setup.py` and add `my_subscriber = my_first_package.my_subscriber:main` to the `entry_points`.
+
+```python
+# setup.py
+...
+    entry_points={
+        'console_scripts': [
+            'my_publisher = my_first_package.my_publisher:main',
+            'my_subscriber = my_first_package.my_subscriber:main', # Add this line
+        ],
+    },
+...
+```
+
+### Step 6: Build the Package with `colcon`
+
+**Colcon** is the standard build tool for ROS 2. It finds all the packages in your workspace, resolves their dependencies, and builds them in the correct order.
+
+1.  Navigate to the root of your workspace (`ros2_ws`).
+    ```bash
+    cd ~/ros2_ws
+    ```
+2.  Run the build command:
+    ```bash
+    colcon build
+    ```
+
+Colcon will create three new directories: `build/`, `install/`, and `log/`. The `install/` directory contains the final, runnable version of your package.
+
+### Step 7: Source the Workspace
+
+Before you can run your new nodes, you need to **source** your workspace's setup file. This tells your terminal where to find the executables you just built.
+
+```bash
+source install/setup.bash
+```
+
+<Admonition type="tip" title="Pro Tip">
+Add `source ~/ros2_ws/install/setup.bash` to your `~/.bashrc` file to automatically source your workspace every time you open a new terminal.
+</Admonition>
+
+### Step 8: Run Your Nodes
+
+Now you can run your nodes using the `ros2 run` command.
+
+1.  Open a terminal and run the subscriber:
+    ```bash
+    ros2 run my_first_package my_subscriber
+    ```
+2.  Open a **second** terminal (and make sure to source the workspace again if you haven't added it to your `.bashrc`) and run the publisher:
+    ```bash
+    ros2 run my_first_package my_publisher
+    ```
+
+You should see the publisher sending messages and the subscriber receiving them. You have successfully created, built, and run your first ROS 2 package! This fundamental workflow is what you will use for all the projects in this book.

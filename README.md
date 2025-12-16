@@ -1,1 +1,1 @@
-# Physical-ai-humanoid-robotics-book
+# hackathon-robotics-book

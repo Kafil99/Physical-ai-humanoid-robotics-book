@@ -1,0 +1,175 @@
+---
+id: gazebo-environment-setup
+title: Gazebo Environment Setup
+sidebar_position: 1
+slug: /02-module2-gazebo-unity/gazebo-environment-setup
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Setting Up Your Gazebo Simulation Environment
+
+While RViz is great for visualizing your robot's state, it doesn't simulate physics, sensors, or interactions with the world. For that, we need a powerful physics simulator like **Gazebo**. Gazebo allows you to create a "digital twin" of your robot and its environment, enabling you to test and refine your software before deploying it on a physical robot.
+
+### Step 1: Install Gazebo and ROS 2 Integration
+
+Gazebo is tightly integrated with ROS 2. You can install it and the necessary integration packages with a single command.
+
+```bash
+sudo apt update
+sudo apt install ros-humble-gazebo-ros-pkgs
+```
+This command installs Gazebo and the `gazebo_ros` package, which provides plugins and tools for connecting Gazebo simulations to your ROS 2 system.
+
+### Step 2: Create a Custom World File
+
+A Gazebo **world** is a `.sdf` (Simulation Description Format) file that defines the environment, including lighting, physics properties, and models (like ground planes, walls, and obstacles).
+
+Let's create a simple world file.
+
+**File: `my_world.sdf`**
+```xml
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="default">
+    <!-- A global light source -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <!-- A ground plane -->
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <!-- Add a simple obstacle -->
+    <model name="box_obstacle">
+      <pose>2.0 0.0 0.5 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <box>
+              <size>1 1 1</size>
+            </box>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/Red</name>
+            </script>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>
+```
+-   `<include>`: This tag allows you to use pre-existing models from Gazebo's model database, like `sun` and `ground_plane`.
+-   `<model>`: Defines a new model directly within the world file. Here, we've created a simple red box as an obstacle.
+
+### Step 3: Launch Gazebo with Your Custom World
+
+You can start Gazebo and load your world file using `ros2 launch`.
+
+**File: `gazebo.launch.py`**
+```python
+import os
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+
+def generate_launch_description():
+    pkg_gazebo_ros = get_package_share_directory('gazebo_ros')
+    
+    # Path to your custom world file
+    world_path = os.path.join(
+        get_package_share_directory('my_first_package'), 
+        'worlds', 
+        'my_world.sdf'
+    )
+
+    return LaunchDescription([
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(
+                os.path.join(pkg_gazebo_ros, 'launch', 'gazebo.launch.py')
+            ),
+            # Pass the world file to the launch script
+            launch_arguments={'world': world_path}.items()
+        )
+    ])
+```
+Run this launch file, and Gazebo will start with your custom world, including the red box obstacle.
+
+### Step 4: Spawning Your Robot in Gazebo
+
+Now, let's add the robot you defined in the URDF chapter into our Gazebo world.
+
+1.  **Enhance your URDF**: Gazebo's SDF format is more expressive than URDF. To make your URDF work well in Gazebo, you often need to add Gazebo-specific tags for things like inertia, materials, and sensor plugins. However, for a simple visualization, the basic URDF is often sufficient.
+
+2.  **Create a launch file to spawn the robot**: We need a launch file that does two things: starts Gazebo and then uses the `spawn_entity.py` script (provided by `gazebo_ros`) to add our robot model to the running simulation.
+
+**File: `spawn_robot.launch.py`**
+```python
+import os
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    pkg_gazebo_ros = get_package_share_directory('gazebo_ros')
+    pkg_my_package = get_package_share_directory('my_first_package')
+
+    # Path to the world file
+    world_path = os.path.join(pkg_my_package, 'worlds', 'my_world.sdf')
+    
+    # Path to the URDF file
+    urdf_path = os.path.join(pkg_my_package, 'urdf', 'my_robot.urdf')
+    
+    # Start Gazebo
+    gazebo = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(pkg_gazebo_ros, 'launch', 'gazebo.launch.py')
+        ),
+        launch_arguments={'world': world_path}.items()
+    )
+
+    # Spawn the robot
+    spawn_entity = Node(
+        package='gazebo_ros',
+        executable='spawn_entity.py',
+        arguments=['-topic', 'robot_description', '-entity', 'simple_humanoid'],
+        output='screen'
+    )
+    
+    # Publish robot description
+    robot_state_publisher = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        output='screen',
+        parameters=[{'robot_description': open(urdf_path).read()}]
+    )
+
+    return LaunchDescription([
+        gazebo,
+        robot_state_publisher,
+        spawn_entity,
+    ])
+```
+
+<Admonition type="info" title="How it Works">
+1.  The `gazebo` action starts the Gazebo simulator with your specified world.
+2.  The `robot_state_publisher` node reads your URDF file and publishes its contents to the `/robot_description` topic.
+3.  The `spawn_entity` node subscribes to the `/robot_description` topic and uses that information to spawn a model named `simple_humanoid` into the Gazebo simulation.
+</Admonition>
+
+When you run this launch file, you will see your Gazebo world open, and your simple humanoid robot will appear at the center of the world. You now have a complete digital twin environment for testing your robot's software.

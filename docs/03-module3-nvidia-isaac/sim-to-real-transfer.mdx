@@ -1,0 +1,86 @@
+---
+id: sim-to-real-transfer
+title: Sim-to-Real Transfer
+sidebar_position: 4
+slug: /03-module3-nvidia-isaac/sim-to-real-transfer
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Bridging the Gap: Sim-to-Real Transfer
+
+One of the most significant challenges in modern robotics is the **"reality gap"**—the difference between how a robot behaves in simulation versus how it behaves in the real world. Training AI models in simulation is faster, cheaper, and safer than training on physical hardware. However, if the simulation is not a faithful representation of reality, a model trained exclusively in sim will likely fail when deployed on a real robot.
+
+**Sim-to-Real (Sim2Real) Transfer** is the art and science of bridging this reality gap, enabling models trained in a digital twin to work effectively on a physical robot with minimal fine-tuning.
+
+### The Challenges of the Reality Gap
+
+The reality gap arises from many sources:
+-   **Physics Discrepancies**: The simulator's physics engine is an approximation. Differences in friction, mass distribution, and motor dynamics can cause a controller that works perfectly in sim to be unstable in reality.
+-   **Sensor Noise and Bias**: Real sensors are noisy. Cameras have lens distortion and motion blur, LiDAR returns can be affected by reflective surfaces, and IMUs drift over time. A simulated sensor is often too perfect.
+-   **Visual Differences**: The appearance of the world—textures, lighting, reflections—is incredibly complex. A model trained on clean, simulated images may fail when presented with the visual clutter and variability of the real world.
+-   **Latency**: In the real world, there are delays in communication, sensor data processing, and actuator response that are often not fully modeled in simulation.
+
+### Key Technique: Domain Randomization
+
+The most powerful technique for bridging the reality gap is **Domain Randomization**. The core idea is simple: if your simulation is not a perfect model of reality, then make it a collection of *many different* simulations. By training your AI model across a wide variety of simulated conditions, you force it to learn a robust strategy that is not overly dependent on any single set of parameters.
+
+<div align="center">
+  <img src="/img/domain-randomization.png" alt="Domain Randomization" width="700"/>
+  <p>Domain Randomization exposes the AI to a wide range of visual and physical conditions.</p>
+</div>
+
+With Domain Randomization, you randomize aspects of the simulation at the start of each training episode:
+-   **Visual Randomization**:
+    -   Lighting (intensity, color, position)
+    -   Textures on objects and the robot itself
+    -   Camera position and orientation
+-   **Physics Randomization**:
+    -   Mass and center of mass of objects
+    -   Friction coefficients of surfaces
+    -   Motor strengths and joint damping
+-   **Positional Randomization**:
+    -   Starting position of the robot and objects
+
+By learning to succeed across all these variations, the model learns to ignore the "noise" of the simulation and focuses on the underlying task. When deployed, the real world is just another variation that the model has been trained to handle.
+
+Isaac Sim provides a powerful API for scripting domain randomization.
+
+```python
+# Example of Domain Randomization in Isaac Sim
+import omni.replicator.core as rep
+
+# Define randomization for a light source
+light_prim = rep.get.prims(path_pattern="/World/defaultLight")
+with light_prim:
+    rep.modify.attribute("intensity", rep.distribution.uniform(500, 2000))
+    rep.modify.attribute("color", rep.distribution.uniform((0.1, 0.1, 0.1), (1.0, 1.0, 1.0)))
+
+# Define randomization for the texture of an object
+my_cube = rep.get.prims(path_pattern="/World/my_cube")
+textures = ["/path/to/texture1.png", "/path/to/texture2.png"]
+with my_cube:
+    rep.modify.material(re.get.material(textures))
+    
+# Attach these randomizers to be called on each training step
+rep.orchestrator.register(
+    on_init=[
+        (light_prim, "modify"),
+        (my_cube, "modify")
+    ]
+)
+```
+
+### Deployment to an Embedded Platform (NVIDIA Jetson)
+
+Once your model is trained, the final step is to deploy it onto the robot's onboard computer. For high-performance AI, this is often an embedded platform like the **NVIDIA Jetson** series (e.g., Jetson Orin, Jetson Xavier).
+
+The deployment workflow typically looks like this:
+1.  **Model Optimization**: A trained deep learning model (e.g., from PyTorch or TensorFlow) is optimized for inference using **NVIDIA TensorRT**. TensorRT performs several optimizations, such as layer fusion and precision calibration (e.g., using FP16 or INT8), to dramatically speed up the model's execution time on NVIDIA GPUs.
+2.  **Cross-Compilation**: Your ROS 2 nodes and other application code are cross-compiled for the ARM architecture of the Jetson platform. This is often done within a Docker container that mimics the Jetson environment.
+3.  **Create a Deployment Container**: The optimized model, your ROS 2 nodes, and all necessary dependencies are packaged into a Docker container built for the Jetson platform (`linux/arm64`).
+4.  **Deploy to Robot**: This Docker container is then loaded onto the Jetson on the physical robot and run.
+
+Because the Isaac ROS packages you used for development are also designed to run on Jetson, and because your AI model was made robust through domain randomization, the transition from simulation to the real world becomes much smoother. The robot running on Jetson executes the same ROS 2 graph, subscribes to the same topics, and uses the same perception models that you tested thoroughly in Isaac Sim.

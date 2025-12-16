@@ -1,0 +1,95 @@
+---
+id: digital-twin-workstation
+title: Digital Twin Workstation
+sidebar_position: 1
+slug: /05-hardware-guide/digital-twin-workstation
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/Tabs';
+
+## Building a Workstation for Digital Twin and Simulation
+
+Developing Physical AI applications often requires significant computational resources, especially when dealing with high-fidelity simulations like NVIDIA Isaac Sim. A powerful **Digital Twin Workstation** is the backbone of efficient robotics development, allowing you to iterate quickly, train complex models, and visualize intricate simulations.
+
+This chapter details the hardware specifications and essential software configurations for building such a workstation.
+
+### Hardware Recommendations
+
+The key component for a robust digital twin workstation is a powerful GPU, but other components are also critical for a smooth development experience.
+
+#### 1. Graphics Processing Unit (GPU) - NVIDIA RTX Series
+
+<Admonition type="danger" title="NVIDIA RTX GPU Required">
+NVIDIA Isaac Sim, a core tool in this book, **mandates** an NVIDIA RTX GPU for its real-time ray tracing and simulation capabilities. Integrated graphics or non-NVIDIA GPUs will NOT work for Isaac Sim.
+</Admonition>
+
+-   **Recommended**: NVIDIA GeForce RTX 4070 Ti, RTX 4080, RTX 4090, or professional-grade NVIDIA RTX A-series cards.
+-   **Minimum**: NVIDIA GeForce RTX 3070 or equivalent.
+-   **VRAM**: 12 GB VRAM minimum, 16 GB+ highly recommended, especially for complex scenes or large AI models.
+
+#### 2. Central Processing Unit (CPU)
+
+While the GPU handles most of the heavy lifting for simulation and AI, a strong CPU is important for compilation, running many ROS 2 nodes, and overall system responsiveness.
+
+-   **Recommended**: Intel Core i7 (12th Gen or newer) / i9, or AMD Ryzen 7 (5000 series or newer) / Ryzen 9.
+-   **Cores/Threads**: 8 cores / 16 threads or more is beneficial.
+-   **Clock Speed**: High single-core performance is still valuable for many tasks.
+
+#### 3. Random Access Memory (RAM)
+
+Simulation environments and IDEs can consume a lot of memory.
+
+-   **Minimum**: 32 GB DDR4/DDR5 RAM.
+-   **Recommended**: 64 GB DDR4/DDR5 RAM.
+-   **Speed**: Faster RAM (e.g., 3200MHz+ DDR4, 5600MHz+ DDR5) will improve overall system performance.
+
+#### 4. Storage
+
+Fast storage significantly reduces load times for large simulation assets and improves overall system responsiveness.
+
+-   **Primary Drive**: 1 TB NVMe SSD (PCIe Gen4 or Gen5 recommended). This should house your operating system, Isaac Sim installation, and project files.
+-   **Secondary Drive (Optional)**: A larger SATA SSD or HDD for less frequently accessed data or backups.
+
+#### 5. Power Supply Unit (PSU)
+
+Ensure your PSU can handle the power demands of your chosen GPU and other components.
+
+-   **Recommended**: 750W to 1000W 80 PLUS Gold or Platinum rated PSU, depending on your GPU.
+
+### Software Configuration
+
+A properly configured software environment is just as important as the hardware.
+
+#### 1. Operating System - Ubuntu 22.04 LTS
+
+-   As detailed in the **Workstation Setup** chapter, **Ubuntu 22.04 LTS** is the recommended operating system for compatibility with ROS 2 and NVIDIA tools.
+-   Perform a clean installation on your primary NVMe SSD.
+
+#### 2. NVIDIA Drivers and CUDA Toolkit
+
+-   Install the latest **proprietary NVIDIA drivers** for your GPU. These are typically available through Ubuntu's "Additional Drivers" utility or directly from NVIDIA's website.
+-   The **CUDA Toolkit** (which includes CUDA libraries, development tools, and a runtime) will be installed as part of the NVIDIA SDKs (e.g., with Isaac Sim or through `apt`). Ensure it's correctly configured and matches the requirements of your AI frameworks.
+
+#### 3. Docker and NVIDIA Container Toolkit
+
+-   Set up **Docker** and the **NVIDIA Container Toolkit** as described in the **Workstation Setup** chapter. This is crucial for running many ROS 2 and Isaac ROS packages in isolated, GPU-accelerated containers.
+
+#### 4. Development Tools
+
+-   **ROS 2**: Install ROS 2 Humble or Iron, as covered in the **Workstation Setup** chapter.
+-   **NVIDIA Isaac Sim**: Install via the Omniverse Launcher.
+-   **Visual Studio Code**: The recommended IDE, configured with extensions for Python, C++, ROS, and Docker.
+
+### Verification
+
+After setting up your workstation, perform these checks:
+
+1.  **NVIDIA Driver**: `nvidia-smi` should display your GPU information.
+2.  **CUDA**: Run a CUDA sample (e.g., `cuda-install-samples-11-8.sh` then `make` and `./vectorAdd`) to confirm CUDA functionality.
+3.  **Docker GPU Access**: `docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi` should work.
+4.  **ROS 2 Installation**: `ros2 run demo_nodes_cpp talker` and `ros2 run demo_nodes_py listener` should communicate.
+5.  **Isaac Sim Launch**: Launch Isaac Sim from the Omniverse Launcher and confirm it opens correctly.
+
+A well-equipped and configured workstation will provide a smooth and efficient development experience, allowing you to focus on the challenging and rewarding aspects of Physical AI and humanoid robotics.

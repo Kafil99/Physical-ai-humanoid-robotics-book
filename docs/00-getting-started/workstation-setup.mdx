@@ -1,0 +1,160 @@
+---
+id: workstation-setup
+title: Workstation Setup
+sidebar_position: 3
+slug: /00-getting-started/workstation-setup
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Setting Up Your Development Workstation
+
+A consistent and correctly configured development environment is critical for success in robotics. This guide provides a step-by-step process for setting up your workstation with all the necessary software, drivers, and tools.
+
+<Admonition type="info" title="Goal">
+By the end of this chapter, you will have a complete, ready-to-use development environment for building the projects in this book.
+</Admonition>
+
+---
+
+### Step 1: Install Ubuntu 22.04 LTS
+
+The Robot Operating System (ROS 2) and its ecosystem are primarily developed and tested on Ubuntu. We will use **Ubuntu 22.04 LTS (Jammy Jellyfish)** for its long-term support and compatibility with the ROS 2 Humble and Iron distributions.
+
+1.  **Download Ubuntu**: Download the Ubuntu 22.04 LTS Desktop image from the [official Ubuntu website](https://ubuntu.com/download/desktop).
+2.  **Create a Bootable USB**: Use a tool like [BalenaEtcher](https://www.balena.io/etcher/) or [Rufus](https://rufus.ie/) to create a bootable USB drive with the downloaded ISO file.
+3.  **Install Ubuntu**:
+    -   Boot your computer from the USB drive.
+    -   Follow the on-screen instructions to install Ubuntu.
+    -   We recommend choosing the **"Minimal installation"** to keep your system clean.
+    -   It is highly recommended to install Ubuntu on a dedicated drive or partition, rather than in a virtual machine, due to the GPU performance requirements of Isaac Sim.
+
+4.  **Post-Installation Update**: Once installed, open a terminal (`Ctrl+Alt+T`) and run the following commands to ensure your system is up-to-date:
+    ```bash
+    sudo apt update
+    sudo apt upgrade -y
+    ```
+
+---
+
+### Step 2: Install NVIDIA Drivers
+
+A correctly installed NVIDIA driver is essential for leveraging your GPU for simulation and AI tasks.
+
+1.  **Identify Recommended Driver**: Ubuntu's "Additional Drivers" tool makes this easy.
+    -   Open the "Software & Updates" application.
+    -   Go to the "Additional Drivers" tab.
+    -   Select the latest **"tested, proprietary"** driver.
+    -   Click "Apply Changes" and wait for the installation to complete.
+
+2.  **Reboot**: After the installation is finished, reboot your computer.
+
+3.  **Verify Installation**: Open a terminal and run the `nvidia-smi` command. You should see a table detailing your GPU's status and the driver version.
+    ```bash
+    nvidia-smi
+    ```
+    If this command works, your driver is correctly installed.
+
+---
+
+### Step 3: Install Docker and NVIDIA Container Toolkit
+
+Docker allows us to run applications in isolated, reproducible environments. This is standard practice in modern robotics development.
+
+1.  **Install Docker Engine**: Follow the official Docker documentation to install Docker Engine on Ubuntu. You can run the convenience script for a quick setup:
+    ```bash
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sudo sh get-docker.sh
+    ```
+
+2.  **Add Your User to the `docker` Group**: This allows you to run Docker commands without `sudo`.
+    ```bash
+    sudo usermod -aG docker $USER
+    ```
+    <Admonition type="caution" title="Important">
+    You will need to **log out and log back in** for this change to take effect.
+    </Admonition>
+
+3.  **Install NVIDIA Container Toolkit**: This toolkit enables Docker containers to access your NVIDIA GPU.
+    ```bash
+    distribution=$(. /etc/os-release;echo $ID$VERSION_ID) \
+      && curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+      && curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list | \
+            sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
+            sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+    sudo apt-get update
+    sudo apt-get install -y nvidia-container-toolkit
+    sudo nvidia-ctk runtime configure --runtime=docker
+    sudo systemctl restart docker
+    ```
+
+4.  **Verify GPU Access in Docker**: Run the following command. It should download a small container and execute `nvidia-smi` from within it.
+    ```bash
+    docker run --rm --gpus all nvidia/cuda:12.1.1-base-ubuntu22.04 nvidia-smi
+    ```
+    If you see the same output as in Step 2, your Docker setup is GPU-ready.
+
+---
+
+### Step 4: Install ROS 2
+
+We will install ROS 2 Humble, which is the recommended long-term support version for Ubuntu 22.04.
+
+<Tabs>
+  <TabItem value="humble" label="ROS 2 Humble" default>
+    ```bash
+    # Enable Ubuntu Universe repository
+    sudo apt install software-properties-common
+    sudo add-apt-repository universe
+
+    # Add the ROS 2 GPG key
+    sudo apt update && sudo apt install curl
+    sudo curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg
+
+    # Add the ROS 2 repository to your sources list.
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/ros-archive-keyring.gpg] http://packages.ros.org/ros2/ubuntu $(. /etc/os-release && echo $UBUNTU_CODENAME) main" | sudo tee /etc/apt/sources.list.d/ros2.list > /dev/null
+    
+    # Install ROS 2
+    sudo apt update
+    sudo apt install ros-humble-desktop
+
+    # Source the setup file
+    echo "source /opt/ros/humble/setup.bash" >> ~/.bashrc
+    source ~/.bashrc
+    ```
+  </TabItem>
+  <TabItem value="iron" label="ROS 2 Iron">
+    ```bash
+    # (Similar steps for Iron, but replace 'humble' with 'iron')
+    # Note: Iron is not an LTS release. Humble is recommended.
+    ```
+  </TabItem>
+</Tabs>
+
+**Verification**: In a new terminal, run `printenv | grep ROS`. You should see several environment variables like `ROS_DISTRO=humble`. You can also run the `talker` demo:
+- In one terminal: `ros2 run demo_nodes_cpp talker`
+- In a second terminal: `ros2 run demo_nodes_py listener`
+You should see the listener terminal printing messages from the talker.
+
+---
+
+### Step 5: Install Visual Studio Code
+
+VS Code is our recommended code editor due to its excellent support for Python, C++, Docker, and ROS.
+
+1.  **Download and Install**: Download the `.deb` package from the [official VS Code website](https://code.visualstudio.com/).
+2.  Install it using `apt`:
+    ```bash
+    sudo apt install ./<file-name>.deb
+    ```
+3.  **Install Recommended Extensions**: Open VS Code and install the following extensions from the Marketplace (`Ctrl+Shift+X`):
+    -   `ms-python.python` (Python)
+    -   `ms-vscode.cpptools` (C++ IntelliSense)
+    -   `ms-azuretools.vscode-docker` (Docker)
+    -   `ms-iot.vscode-ros` (ROS)
+    -   `redhat.vscode-yaml` (YAML)
+    -   `esbenp.prettier-vscode` (Code formatter)
+
+Your workstation is now fully configured and ready for the exciting journey ahead!

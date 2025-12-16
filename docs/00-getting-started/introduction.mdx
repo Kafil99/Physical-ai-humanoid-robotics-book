@@ -1,0 +1,191 @@
+---
+id: introduction
+title: Introduction
+sidebar_position: 1
+slug: /00-getting-started/introduction
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Introduction to Physical AI and Embodied Intelligence
+
+Welcome to the exciting world where Artificial Intelligence meets the physical realm! This book is your comprehensive guide to understanding and building systems that don't just process information, but actively perceive, reason about, and interact with the world through a physical body. This field, often called **Physical AI** or **Embodied AI**, is at the forefront of robotics and artificial intelligence research. It's the key to unlocking the next generation of intelligent machines that can perform complex, real-world tasks in dynamic and unstructured environments.
+
+Traditional AI has achieved incredible feats in the virtual world, mastering complex games like Go, generating creative text and images, and analyzing vast datasets. However, transplanting this intelligence into a physical robot that needs to navigate a cluttered room, manipulate diverse objects, or collaborate safely with humans presents a profound set of challenges. This is the domain of Physical AI.
+
+### What is Physical AI?
+
+<div align="center">
+  <img src="/img/logo.svg" alt="Physical AI Concept" width="400"/>
+</div>
+
+**Physical AI** refers to an intelligent system that possesses a physical body and experiences the world directly through sensors and actuators. Unlike a disembodied AI that only processes data, a Physical AI's intelligence is fundamentally linked to its physical form and its continuous interaction with the environment.
+
+Key aspects of Physical AI include:
+*   **Embodiment**: The AI has a physical form—a robotic arm, a wheeled rover, a humanoid, or even a simple sensor node. This body defines its capabilities and constraints, shaping how it perceives and acts.
+*   **Real-World Interaction**: It operates in the messy, unpredictable physical world, governed by physics, uncertainty, and constant change. It's not a simulation; the consequences of its actions are real.
+*   **Perception-Action Loop**: This is the core cycle of Physical AI. It continuously **perceives** its environment through sensors, **reasons** about that information to make a decision, and **acts** upon the world using its actuators. The results of its actions are then immediately perceived, creating a closed feedback loop.
+
+This loop is the fundamental building block of all autonomous systems. Let's look at a simple, conceptual code example that illustrates this.
+
+<Tabs>
+  <TabItem value="python" label="Python" default>
+    ```python
+    import time
+    import random
+
+    class RobotSensors:
+        """Simulates the robot's sensory input."""
+        def get_camera_image(self):
+            # In a real robot, this would capture an image.
+            print("  (Perception)  Capturing image...")
+            # Simulate detecting an object.
+            return {"object_detected": random.choice([True, False])}
+
+        def get_distance(self):
+            # In a real robot, this would use a LiDAR or ultrasonic sensor.
+            print("  (Perception)  Measuring distance...")
+            return random.uniform(0.1, 3.0) # distance in meters
+
+    class RobotBrain:
+        """The 'brains' of the robot, responsible for decision-making."""
+        def decide_action(self, sensor_data):
+            print("  (Reasoning)   Analyzing sensor data...")
+            if sensor_data["image"].get("object_detected") and sensor_data["distance"] < 1.0:
+                return "avoid"
+            elif sensor_data["distance"] > 1.5:
+                return "move_forward"
+            else:
+                return "wait"
+
+    class RobotActuators:
+        """Simulates the robot's physical actions."""
+        def move_forward(self):
+            print("  (Action)      Executing: Move forward.")
+
+        def avoid(self):
+            print("  (Action)      Executing: Stop and turn to avoid object.")
+        
+        def wait(self):
+            print("  (Action)      Executing: Wait.")
+
+    def run_robot_cycle():
+        """A single perception-action loop."""
+        sensors = RobotSensors()
+        brain = RobotBrain()
+        actuators = RobotActuators()
+
+        # 1. Perception
+        image_data = sensors.get_camera_image()
+        distance_data = sensors.get_distance()
+        
+        # 2. Reasoning
+        action_to_perform = brain.decide_action({
+            "image": image_data,
+            "distance": distance_data
+        })
+
+        # 3. Action
+        if action_to_perform == "move_forward":
+            actuators.move_forward()
+        elif action_to_perform == "avoid":
+            actuators.avoid()
+        else:
+            actuators.wait()
+
+    if __name__ == "__main__":
+        print("Starting robot simulation for 3 cycles...")
+        for i in range(3):
+            print(f"\n--- Cycle {i+1} ---")
+            run_robot_cycle()
+            time.sleep(1.5)
+        print("\nSimulation complete.")
+    ```
+  </TabItem>
+  <TabItem value="cpp" label="C++">
+    ```cpp
+    #include <iostream>
+    #include <string>
+    #include <random>
+    #include <thread>
+    #include <chrono>
+
+    // Simulate sensor readings
+    double get_distance() {
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_real_distribution<> distr(0.1, 3.0);
+        double distance = distr(gen);
+        std::cout << "  (Perception)  Measured distance: " << distance << "m" << std::endl;
+        return distance;
+    }
+
+    // Decision-making logic
+    std::string decide_action(double distance) {
+        std::cout << "  (Reasoning)   Analyzing distance..." << std::endl;
+        if (distance < 0.5) {
+            return "stop";
+        } else {
+            return "move_forward";
+        }
+    }
+
+    // Simulate robot actions
+    void execute_action(const std::string& action) {
+        if (action == "move_forward") {
+            std::cout << "  (Action)      Executing: Moving forward." << std::endl;
+        } else {
+            std::cout << "  (Action)      Executing: Stopping." << std::endl;
+        }
+    }
+
+    int main() {
+        std::cout << "Starting C++ robot simulation for 3 cycles..." << std::endl;
+        for (int i = 0; i < 3; ++i) {
+            std::cout << "\n--- Cycle " << i + 1 << " ---" << std::endl;
+            
+            // 1. Perception
+            double distance = get_distance();
+            
+            // 2. Reasoning
+            std::string action = decide_action(distance);
+            
+            // 3. Action
+            execute_action(action);
+            
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+        }
+        std::cout << "\nSimulation complete." << std::endl;
+        return 0;
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+### The Concept of Embodied Intelligence
+
+**Embodied Intelligence** is the theory that an agent's intelligence is not just in its "brain" but is profoundly shaped by the characteristics of its body and its interactions with the environment. It proposes that cognition isn't an abstract process of manipulating symbols, but an emergent property that arises from the dynamic interplay between the agent's physical form, its sensory experiences, and its actions.
+
+Think about how a child learns. They don't just read about gravity; they learn by stumbling, falling, and feeling its effects. They learn about object properties by touching, grasping, and even tasting things. This rich, multi-sensory feedback from the physical world is crucial for developing a deep, intuitive understanding of how the world works. Embodied AI systems leverage the same principle, learning and adapting through physical experience to build more robust and versatile intelligence.
+
+### Why is Physical Interaction Significant?
+
+The ability to physically interact with the world is transformative for several reasons:
+
+1.  **Solving Real-World Problems**: Many of humanity's most pressing challenges are physical. From automating manufacturing and logistics to assisting the elderly, performing remote surgery, and exploring hazardous environments, we need robots that can understand and manipulate the physical world.
+2.  **Robustness and Generalization**: The real world is messy and unpredictable. By directly confronting this complexity, an embodied AI is forced to develop more robust and adaptive behaviors than an AI trained only in a sterile, simulated environment. It learns to generalize from its experiences.
+3.  **Enhanced Learning and Grounding**: Physical interaction "grounds" abstract concepts in reality. The concept of "heavy" is no longer just a word; it's an experience of motor strain and effort. This grounding helps AI build a more common-sense understanding of the world.
+4.  **Human-Robot Collaboration**: For robots to become true partners to humans in our homes, workplaces, and daily lives, they must be able to perceive our environment, understand our intentions, and act safely and predictably. This requires a sophisticated mastery of physical interaction.
+
+### What You Will Learn in This Book
+
+This book is designed to be a hands-on journey. You won't just read about theories; you will build a complete Physical AI system from the ground up. We will progress through a series of structured modules:
+
+-   **Module 1: The Robotic Nervous System (ROS 2)**: Learn the industry-standard communication framework for robotics.
+-   **Module 2: Building the Digital Twin (Gazebo & Unity)**: Create realistic simulations of your robot and its environment.
+-   **Module 3: The AI Brain (NVIDIA Isaac)**: Dive into the powerful suite of AI and simulation tools for robotics.
+-   **Module 4: Language-Driven Robotics (VLA Models)**: Explore the cutting edge of AI by connecting large language models to robotic actions.
+-   **Capstone Project**: Integrate everything you've learned to build a functional, multi-modal humanoid robot application.
+
+Get ready to bridge the gap between digital intelligence and physical action. Let's build the future of robotics, together.

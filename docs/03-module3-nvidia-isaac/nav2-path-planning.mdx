@@ -1,0 +1,123 @@
+---
+id: nav2-path-planning
+title: Nav2 Path Planning
+sidebar_position: 3
+slug: /03-module3-nvidia-isaac/nav2-path-planning
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Autonomous Navigation with Nav2
+
+Once a robot can build a map and locate itself within it (thanks to a SLAM system), the next step is to navigate autonomously from point A to point B. In the ROS 2 ecosystem, the industry-standard tool for this is **Nav2**.
+
+The Nav2 project is a powerful, highly-configurable navigation stack that can be adapted to a wide variety of robots and environments.
+
+### The Core Components of Nav2
+
+Nav2 is not a single node, but a collection of specialized servers that work together to achieve autonomous navigation.
+
+<div align="center">
+  <img src="/img/nav2-architecture.png" alt="Nav2 Architecture" width="800"/>
+</div>
+
+1.  **BT Navigator (Behavior Tree Navigator)**: This is the high-level mission planner. It takes a goal (e.g., "go to coordinates X, Y") and uses a **Behavior Tree** to orchestrate the entire navigation process. It calls on the other servers to plan, control, and recover from failures.
+
+2.  **Planner Server**: Responsible for finding a valid **global path** from the robot's current location to the goal. It uses a map of the environment to find the optimal path, avoiding known obstacles. Nav2 supports various planning algorithms like A* and Dijkstra.
+
+3.  **Controller Server**: Responsible for **local path following**. It takes the global path from the Planner Server and computes safe velocity commands (`/cmd_vel`) to send to the robot's base, ensuring it follows the path while avoiding immediate, dynamic obstacles (like people walking by). This is often called "local planning."
+
+4.  **Costmap Filters & Layers**: Nav2 uses **costmaps** to represent the environment. A costmap is a grid where each cell has a value representing how "costly" it is to travel through it (e.g., areas near obstacles are high-cost). Nav2 uses two main costmaps:
+    -   **Global Costmap**: Used by the Planner for long-range pathfinding.
+    -   **Local Costmap**: A smaller, rolling window around the robot used by the Controller for immediate obstacle avoidance.
+    Costmaps can be updated by various layers, such as a static layer from the SLAM map, an obstacle layer from LiDAR scans, and an inflation layer that adds a buffer zone around obstacles.
+
+5.  **Recovery Server**: This server contains a set of recovery behaviors to handle situations where the robot gets stuck, such as clearing the costmap, spinning in place, or backing up.
+
+### Configuring Nav2 for Your Robot
+
+Configuring Nav2 involves creating a set of YAML files that define the parameters for each of the servers.
+
+**File: `nav2_params.yaml`**
+```yaml
+# Example parameters for the controller server
+controller_server:
+  ros__parameters:
+    use_sim_time: True
+    controller_frequency: 20.0
+    # The plugin for the specific local planning algorithm to use
+    controller_plugin: "dwb_core::DWBLocalPlanner"
+    
+    DWBLocalPlanner:
+      # Parameters for the DWB (Dynamic Window Approach) local planner
+      kinematic_params:
+        min_vel_x: 0.0
+        max_vel_x: 0.5
+        acc_lim_x: 2.5
+      
+# Example parameters for the planner server
+planner_server:
+  ros__parameters:
+    use_sim_time: True
+    planner_plugin: "nav2_navfn_planner/NavFnPlanner"
+    # ... NavFnPlanner parameters
+
+# Parameters for the global and local costmaps
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      # ... costmap parameters
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      # ... costmap parameters
+```
+
+<Admonition type="info" title="Configuration is Key">
+The performance of Nav2 is highly dependent on proper tuning. The parameters for your specific robot (its size, speed, acceleration limits) and environment must be carefully configured.
+</Admonition>
+
+### Launching Nav2
+
+A typical Nav2 launch file will start all the required servers and load the parameter file.
+
+```python
+# nav2.launch.py
+import os
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
+
+def generate_launch_description():
+    nav2_bringup_dir = get_package_share_directory('nav2_bringup')
+    
+    # Path to your custom params file
+    params_file = os.path.join(get_package_share_directory('my_first_package'), 'config', 'nav2_params.yaml')
+    
+    return LaunchDescription([
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(os.path.join(nav2_bringup_dir, 'launch', 'bringup_launch.py')),
+            launch_arguments={
+                'map': 'path/to/your/map.yaml',
+                'use_sim_time': 'True',
+                'params_file': params_file
+            }.items(),
+        )
+    ])
+```
+
+### Sending a Navigation Goal
+
+Once Nav2 is running, you can send it a goal in several ways:
+1.  **RViz2**: The `nav2_bringup` package includes an RViz2 configuration that has a "Nav2 Goal" tool. You can simply click and drag on the map to set a navigation goal.
+2.  **Action Client Node**: You can write a Python or C++ node that acts as an action client for the `/navigate_to_pose` action server. This allows you to programmatically send goals to Nav2.
+3.  **Command Line**:
+    ```bash
+    ros2 action send_goal /navigate_to_pose nav2_msgs/action/NavigateToPose "{pose: {header: {frame_id: 'map'}, pose: {position: {x: 1.0, y: 2.0, z: 0.0}, orientation: {w: 1.0}}}}"
+    ```
+
+When Nav2 receives a goal, the BT Navigator will kick off the process. The Planner will create a global path, and the Controller will start issuing velocity commands to make the robot follow that path, all while the costmap layers are updating to avoid any new obstacles. This coordinated effort of specialized servers is what makes robust autonomous navigation possible.

@@ -1,0 +1,79 @@
+---
+id: project-based-evaluations
+title: Project-based Evaluations
+sidebar_position: 1
+slug: /07-assessments/project-based-evaluations
+---
+
+## Project-based Evaluations and Rubrics
+
+This book emphasizes hands-on learning, and the best way to solidify your understanding of Physical AI and humanoid robotics is through practical application. This chapter outlines the assessment criteria and provides rubrics for evaluating your progress and mastery of the concepts learned throughout the book. These evaluations are designed to be project-based, mimicking real-world development scenarios.
+
+### 1. ROS 2 Package Development Evaluation
+
+**Objective**: Assess your ability to create, configure, and communicate between ROS 2 nodes.
+
+**Project**: Create a ROS 2 package that implements a simple sensor-actuator loop (e.g., a "distance monitor" node that subscribes to simulated distance sensor data and publishes a "stop" or "move" command to a robot controller node).
+
+**Rubric**:
+
+| Criteria                    | Excellent (5 pts)                                 | Good (3 pts)                                         | Needs Improvement (1 pt)                               |
+| :-------------------------- | :------------------------------------------------ | :--------------------------------------------------- | :----------------------------------------------------- |
+| **Package Structure**       | Correct `ament_python` structure, `setup.py`, `package.xml` well-defined. | Minor issues in package metadata or structure.       | Incorrect package structure or missing files.          |
+| **Node Implementation**     | Nodes correctly implemented, adheres to single responsibility principle. | Nodes mostly functional, minor logic flaws.           | Nodes non-functional or severely flawed.               |
+| **ROS 2 Communication**     | Correct use of publishers, subscribers, services, and actions. | Communication mostly functional, minor topic/message issues. | Incorrect communication patterns or failure to communicate. |
+| **Launch File Orchestration** | Robust Python launch file, correctly manages nodes and parameters. | Launch file functional, minor configuration issues.    | Launch file fails or does not manage nodes correctly.  |
+| **Code Quality**            | Clean, commented, readable code, follows Python/C++ best practices. | Code generally readable, some missing comments or minor style issues. | Unreadable, uncommented code, poor practices.          |
+| **Demonstration**           | Clearly demonstrates functionality with `ros2 run` and `ros2 launch`. | Demonstrates functionality with some issues.           | Unable to demonstrate functionality.                   |
+
+### 2. Gazebo Simulation Implementation Evaluation
+
+**Objective**: Evaluate your ability to create a custom Gazebo world and integrate a robot model.
+
+**Project**: Design a simple Gazebo world with obstacles, and spawn your URDF robot model from Module 1 into it.
+
+**Rubric**:
+
+| Criteria                    | Excellent (5 pts)                                 | Good (3 pts)                                         | Needs Improvement (1 pt)                               |
+| :-------------------------- | :------------------------------------------------ | :--------------------------------------------------- | :----------------------------------------------------- |
+| **World Design (SDF)**      | Creative and functional world, proper use of models and lighting. | World functional, minor design or model issues.        | World incomplete or non-functional.                    |
+| **Robot Integration**       | Robot URDF correctly loaded and spawns in Gazebo. | Robot loads, minor visual or collision issues.         | Robot fails to load or has major issues.               |
+| **Physics Configuration**   | Realistic physics properties (friction, gravity, inertia) configured. | Physics mostly functional, some unrealistic behavior.  | Physics configuration incorrect or non-functional.     |
+| **Sensor Simulation**       | At least one sensor (e.g., camera, LiDAR) integrated and publishing data. | Sensor integrated, minor data issues or incorrect topic. | Sensor integration fails or publishes no data.           |
+| **Launch File Integration** | Seamless launch of Gazebo and robot spawn via ROS 2 launch file. | Launch process functional, minor issues.             | Launch process fails.                                  |
+
+### 3. Isaac-based Perception Pipeline Assessment
+
+**Objective**: Assess your ability to set up Isaac Sim, integrate Isaac ROS, and implement a perception task.
+
+**Project**: Use Isaac Sim to simulate a robot with a camera. Implement an Isaac ROS VSLAM pipeline to localize the robot within the simulated environment.
+
+**Rubric**:
+
+| Criteria                    | Excellent (5 pts)                                 | Good (3 pts)                                         | Needs Improvement (1 pt)                               |
+| :-------------------------- | :------------------------------------------------ | :--------------------------------------------------- | :----------------------------------------------------- |
+| **Isaac Sim Setup**         | Isaac Sim environment correctly configured, robot model loaded. | Isaac Sim setup functional, minor scene issues.        | Isaac Sim setup fails or is incorrect.                 |
+| **Isaac ROS Integration**   | Isaac ROS packages (e.g., VSLAM) correctly integrated and built. | Isaac ROS integration functional, minor configuration issues. | Isaac ROS fails to integrate or build.                 |
+| **VSLAM Functionality**     | Real-time, robust localization demonstrated in RViz2. | VSLAM functional, some drift or instability.         | VSLAM fails to localize or produces incorrect results. |
+| **GPU Utilization**         | Clearly demonstrates GPU acceleration (e.g., low CPU usage for VSLAM). | GPU acceleration evident, some performance bottlenecks. | No clear GPU acceleration or poor performance.         |
+| **Data Visualization**      | Accurate visualization of pose and map in RViz2.  | Visualization present, minor display issues.           | Visualization incorrect or absent.                     |
+
+### 4. Capstone Project Evaluation
+
+**Objective**: Assess your ability to integrate all modules into a fully functional autonomous humanoid assistant that responds to natural language commands.
+
+**Project**: Implement the Autonomous Humanoid Assistant described in Module 6, demonstrating its ability to understand voice commands, navigate to a goal, and interact with objects.
+
+**Rubric**:
+
+| Criteria                    | Excellent (5 pts)                                 | Good (3 pts)                                         | Needs Improvement (1 pt)                               |
+| :-------------------------- | :------------------------------------------------ | :--------------------------------------------------- | :----------------------------------------------------- |
+| **Voice Command Processing**| Robust speech-to-text, accurate intent recognition for diverse commands. | Voice processing functional, occasional recognition errors. | Voice processing fails or is highly inaccurate.          |
+| **Cognitive Planning (LLM)**| LLM effectively decomposes complex commands into executable plans. | LLM planning functional, some issues with complex commands. | LLM planning fails or generates illogical plans.         |
+| **Autonomous Navigation**   | Robot navigates accurately and avoids obstacles to reach goals. | Navigation functional, occasional pathing errors or collisions. | Navigation fails or robot gets stuck.                  |
+| **Object Manipulation**     | Robot successfully identifies, reaches, and grasps specified objects. | Manipulation functional, some issues with precision or grasp. | Manipulation fails or object not grasped.              |
+| **Multi-modal Fusion**      | Seamless integration of vision, language, and action for robust behavior. | Fusion mostly functional, some inconsistencies.      | Fusion fails, leading to disjointed behavior.          |
+| **System Integration**      | All components seamlessly integrated via ROS 2, robust launch file. | Integration functional, minor communication issues.    | Integration fails, components do not communicate.      |
+| **Demonstration**           | Clear, compelling demonstration of all core functionalities. | Demonstrates core functionalities with some minor issues. | Unable to demonstrate key functionalities.             |
+
+These rubrics provide a clear framework for self-assessment and for instructors to evaluate your progress. By successfully completing these project-based evaluations, you will have built a strong portfolio demonstrating your skills in Physical AI and humanoid robotics.

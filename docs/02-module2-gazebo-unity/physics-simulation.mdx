@@ -1,0 +1,110 @@
+---
+id: physics-simulation
+title: Physics Simulation
+sidebar_position: 2
+slug: /02-module2-gazebo-unity/physics-simulation
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Understanding Physics Simulation in Gazebo
+
+Gazebo is more than just a 3D visualizer; it's a powerful physics engine that simulates the laws of physics in a virtual world. This allows you to test how your robot will behave in a realistic environment, accounting for gravity, friction, collisions, and more.
+
+### The Role of the Physics Engine
+
+Gazebo uses a pluggable physics engine, with **ODE (Open Dynamics Engine)** being the default. The physics engine is responsible for:
+-   **Dynamics**: Calculating the motion of objects based on applied forces and torques.
+-   **Collision Detection**: Detecting when two objects intersect.
+-   **Contact Physics**: Simulating the forces that arise from contact, such as friction and restitution (bounciness).
+
+### Configuring Physics Properties in SDF
+
+You can control the physics properties of your world and the models within it using the **Simulation Description Format (SDF)**.
+
+#### 1. World Physics
+
+You can set global physics properties within the `<physics>` tag in your world's SDF file.
+
+**File: `physics_world.sdf`**
+```xml
+<?xml version="1.0" ?>
+<sdf version="1.7">
+  <world name="default">
+    <physics name="default_physics" type="ode">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1</real_time_factor>
+      <real_time_update_rate>1000</real_time_update_rate>
+    </physics>
+    <gravity>0 0 -9.81</gravity>
+    ...
+  </world>
+</sdf>
+```
+-   `<max_step_size>`: The maximum time step for each physics update (in seconds). Smaller values increase accuracy but require more computation.
+-   `<real_time_factor>`: A value of `1` means the simulation runs in real-time. A value less than 1 means it runs slower, and greater than 1 means faster.
+-   `<gravity>`: Sets the gravity vector for the world. The default is Earth's gravity.
+
+#### 2. Link Physics (Inertia)
+
+For the physics engine to accurately simulate your robot, it needs to know about the mass and inertia of each link. This is defined in the `<inertial>` tag within each `<link>` in your URDF or SDF file.
+
+```xml
+<link name="my_link">
+  <inertial>
+    <mass>1.5</mass> <!-- mass in kg -->
+    <inertia>
+      <!-- The 3x3 rotational inertia matrix -->
+      <ixx>0.01</ixx>
+      <ixy>0.0</ixy>
+      <ixz>0.0</ixz>
+      <iyy>0.01</iyy>
+      <iyz>0.0</iyz>
+      <izz>0.01</izz>
+    </inertia>
+  </inertial>
+  ...
+</link>
+```
+<Admonition type="info" title="Inertia Calculation">
+Calculating the inertia matrix for complex shapes can be difficult. CAD software can often calculate this for you, or you can use the formulas for simple shapes (like boxes, spheres, and cylinders). For many simulations, a reasonable approximation is sufficient.
+</Admonition>
+
+#### 3. Surface Properties (Friction and Collisions)
+
+The interaction between two objects is defined by their surface properties. You can specify these in the `<collision>` tag of a link.
+
+```xml
+<collision name="my_collision">
+  <geometry>
+    <box size="1 1 1"/>
+  </geometry>
+  <surface>
+    <friction>
+      <ode>
+        <mu>1.0</mu>   <!-- Coefficient of static friction -->
+        <mu2>0.8</mu2>  <!-- Coefficient of dynamic friction -->
+      </ode>
+    </friction>
+    <contact>
+      <ode>
+        <kp>1e+13</kp> <!-- Stiffness -->
+        <kd>1</kd>     <!-- Damping -->
+        <max_vel>0.01</max_vel>
+        <min_depth>0.001</min_depth>
+      </ode>
+    </contact>
+    <bounce>
+      <restitution_coefficient>0.1</restitution_coefficient> <!-- How bouncy the object is -->
+      <threshold>1.0</threshold>
+    </bounce>
+  </surface>
+</collision>
+```
+-   `<friction>`: Defines the static and dynamic friction coefficients. Higher values mean more friction.
+-   `<contact>`: Defines how the surfaces behave when they come into contact, including stiffness and damping.
+-   `<bounce>`: Defines the bounciness of the surface. A value of `1.0` is perfectly elastic (like a bouncy ball), while `0.0` is perfectly inelastic.
+
+By carefully tuning these physics parameters, you can create a simulation that closely matches the behavior of the real world, allowing you to develop and test your robot's control and navigation software with a high degree of confidence.

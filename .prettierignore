@@ -1,0 +1,9 @@
+build/
+coverage/
+node_modules/
+.docusaurus/
+.DS_Store
+.cache-loader
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

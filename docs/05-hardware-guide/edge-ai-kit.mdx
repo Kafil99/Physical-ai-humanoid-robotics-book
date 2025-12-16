@@ -1,0 +1,99 @@
+---
+id: edge-ai-kit
+title: Edge AI Kit
+sidebar_position: 2
+slug: /05-hardware-guide/edge-ai-kit
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/Tabs';
+
+## Setting Up an Edge AI Kit for Robotics
+
+For many Physical AI applications, especially mobile robots or those operating in environments without reliable cloud connectivity, processing data at the **edge** is crucial. An **Edge AI Kit** refers to a compact, low-power embedded computing platform equipped with a GPU, capable of running AI inference directly on the device. The NVIDIA Jetson Orin series is a prime example of such a kit, offering significant AI processing power in a small form factor.
+
+This chapter guides you through setting up a typical Edge AI Kit, including an NVIDIA Jetson Orin module, an Intel RealSense D435i depth camera, and a ReSpeaker USB microphone array. This combination provides a robust platform for multi-modal perception and interaction.
+
+### Step 1: NVIDIA Jetson Orin Setup
+
+The Jetson Orin Nano/NX series provides GPU acceleration essential for running many of the AI models discussed in this book.
+
+1.  **Flash the JetPack OS**:
+    -   Download [NVIDIA SDK Manager](https://developer.nvidia.com/nvidia-sdk-manager).
+    -   Use SDK Manager to flash the latest **JetPack SDK** onto your Jetson Orin device. This includes Ubuntu, CUDA, cuDNN, TensorRT, and more.
+    -   Follow the instructions provided by NVIDIA SDK Manager, selecting the appropriate Jetson Orin module.
+
+2.  **Initial Configuration**:
+    -   After flashing, boot your Jetson. You'll go through an initial setup wizard similar to a standard Ubuntu installation.
+    -   Update and upgrade your system:
+        ```bash
+        sudo apt update
+        sudo apt upgrade -y
+        ```
+
+3.  **Install ROS 2**: Follow the ROS 2 installation guide (similar to the one in the **Workstation Setup** chapter), ensuring you install the `ros-humble-desktop` (or `ros-iron-desktop`) meta-package.
+
+### Step 2: Intel RealSense D435i Depth Camera Setup
+
+The RealSense D435i provides both RGB color images and depth information, which is invaluable for 3D perception, object detection, and SLAM.
+
+1.  **Connect the Camera**: Connect your RealSense D435i to a USB 3.0 port on your Jetson Orin.
+2.  **Install RealSense SDK (librealsense)**:
+    ```bash
+    sudo apt-key adv --keyserver keys.gnupg.net --recv-key F6E65AC044F8A68B36AA157E5779CC68DC3D6502
+    sudo add-apt-repository "deb https://librealsense.intel.com/Debian/apt-repo $(lsb_release -cs) main" -u
+    sudo apt install librealsense2-dkms librealsense2-utils librealsense2-dev
+    ```
+    -   Verify installation by running `realsense-viewer` in the terminal. You should see video streams from your camera.
+3.  **Install ROS 2 Wrapper**:
+    -   Create a ROS 2 workspace (if you don't have one already).
+    -   Clone the ROS 2 wrapper for RealSense:
+        ```bash
+        git clone https://github.com/IntelRealSense/realsense-ros.git -b ros2-development ~/ros2_ws/src/realsense-ros
+        ```
+    -   Install dependencies:
+        ```bash
+        rosdep install -i --from-path ~/ros2_ws/src/realsense-ros --rosdistro humble -y
+        ```
+    -   Build the workspace:
+        ```bash
+        cd ~/ros2_ws
+        colcon build
+        ```
+    -   Source the workspace: `source install/setup.bash`
+4.  **Launch the RealSense Node**:
+    ```bash
+    ros2 launch realsense2_camera rs_launch.py
+    ```
+    You should see various topics being published, including `/camera/depth/image_rect_raw`, `/camera/color/image_raw`, and `/camera/imu`.
+
+### Step 3: ReSpeaker USB Microphone Array Setup
+
+The ReSpeaker series from Seeed Studio provides multi-array microphones, which are excellent for speech recognition and sound localization in robotics.
+
+1.  **Connect the ReSpeaker**: Plug your ReSpeaker USB microphone array into a USB port on your Jetson Orin.
+2.  **Verify Audio Device**:
+    ```bash
+    arecord -l
+    ```
+    You should see your ReSpeaker listed as a recording device. Note its card number and device number (e.g., `card 1: ReSpeaker [ReSpeaker 4 Mic Array (UAC1.0)], device 0: USB Audio [USB Audio]`).
+3.  **Install PyAudio (for Python audio processing)**:
+    ```bash
+    sudo apt install python3-pyaudio
+    pip install pyaudio
+    ```
+4.  **Test Audio Capture (Python)**:
+    ```python
+    import pyaudio
+    p = pyaudio.PyAudio()
+    info = p.get_host_api_info_by_index(0)
+    numdevices = info.get('deviceCount')
+    for i in range(0, numdevices):
+        if (p.get_device_info_by_host_api_device_index(0, i).get('maxInputChannels')) > 0:
+            print("Input Device id ", i, " - ", p.get_device_info_by_host_api_device_index(0, i).get('name'))
+    p.terminate()
+    ```
+    This script will list all audio input devices. Find your ReSpeaker and note its index.
+
+By setting up these components, your Jetson Orin-based Edge AI Kit now has robust perception capabilities (3D vision, audio input) ready to be integrated with the advanced AI models for Physical AI.

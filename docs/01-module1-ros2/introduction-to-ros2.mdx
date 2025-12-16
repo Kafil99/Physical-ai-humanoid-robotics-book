@@ -1,0 +1,121 @@
+---
+id: introduction-to-ros2
+title: Introduction to ROS 2
+sidebar_position: 1
+slug: /01-module1-ros2/introduction-to-ros2
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## The Architecture of ROS 2: The Robotic Nervous System
+
+Welcome to ROS 2, the backbone of modern robotics. Think of ROS (Robot Operating System) as the nervous system for your robot. It's a flexible framework for writing robot software, providing a standardized way for different parts of your robot's system to communicate with each other.
+
+ROS is not a traditional operating system like Windows or Linux. Instead, it's a set of software libraries and tools that help you build robot applications. It provides low-level device control, hardware abstraction, and a package management system.
+
+### Core Concepts of ROS 2
+
+At its heart, a ROS 2 system is a distributed network of processes called **nodes**. Each node is responsible for a specific task, and they communicate with each other using a set of defined communication patterns.
+
+<div align="center">
+  <img src="/img/ros2-concepts.png" alt="ROS 2 Core Concepts" width="700"/>
+</div>
+
+Let's break down the four main communication patterns:
+
+#### 1. Nodes: The Building Blocks
+A **node** is the smallest unit of execution in ROS 2. You can think of a node as a single program or process. A well-designed robot system is composed of many nodes, each with a single, clear purpose. For example, you might have:
+- A `camera_driver` node that publishes image data.
+- A `collision_avoidance` node that subscribes to sensor data and decides on actions.
+- A `motor_controller` node that receives commands and moves the robot's wheels.
+
+This modularity makes the system easy to debug, test, and reuse.
+
+#### 2. Topics: The Asynchronous Broadcast System
+**Topics** are the primary way nodes communicate. They are named buses over which nodes exchange messages. Topics use a **publish-subscribe** model, which is asynchronous.
+
+-   A **publisher** node sends messages to a topic.
+-   A **subscriber** node receives messages from a topic.
+
+Many nodes can publish or subscribe to the same topic. This creates a one-to-many or many-to-many communication pattern. Topics are ideal for continuous data streams, such as sensor readings, camera images, or robot state information.
+
+**Example**: A camera node publishes images to an `/image_raw` topic, while a perception node and a logging node both subscribe to it.
+
+<Tabs>
+<TabItem value="python" label="Python Publisher/Subscriber">
+```python
+# publisher_node.py
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+class SimplePublisher(Node):
+    def __init__(self):
+        super().__init__('simple_publisher')
+        self.publisher_ = self.create_publisher(String, 'chatter', 10)
+        self.timer = self.create_timer(0.5, self.timer_callback)
+        self.get_logger().info('Publisher node started')
+
+    def timer_callback(self):
+        msg = String()
+        msg.data = f'Hello from ROS 2 at {self.get_clock().now()}'
+        self.publisher_.publish(msg)
+        self.get_logger().info(f'Publishing: "{msg.data}"')
+
+# subscriber_node.py
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+
+class SimpleSubscriber(Node):
+    def __init__(self):
+        super().__init__('simple_subscriber')
+        self.subscription = self.create_subscription(
+            String,
+            'chatter',
+            self.listener_callback,
+            10)
+        self.get_logger().info('Subscriber node started')
+
+    def listener_callback(self, msg):
+        self.get_logger().info(f'I heard: "{msg.data}"')
+```
+</TabItem>
+</Tabs>
+
+#### 3. Services: The Synchronous Request-Response System
+**Services** are used for synchronous, two-way communication. They operate on a **request-response** model, similar to a function call that executes on another node.
+
+-   A **service client** sends a request.
+-   A **service server** receives the request, performs a task, and sends back a response.
+
+Unlike topics, services are synchronous, meaning the client waits until the server completes the task and returns a response. This is useful for tasks that have a clear beginning and end, like "take a picture," "calculate a path," or "save data to a file."
+
+**Example**: A UI node sends a request to a `/move_to_goal` service. The navigation server receives the goal coordinates, calculates a path, moves the robot, and then sends back a response indicating whether the goal was reached successfully.
+
+#### 4. Actions: For Long-Running, Asynchronous Tasks
+**Actions** are for long-running tasks that need to provide continuous feedback and be cancellable. They combine the benefits of topics and services.
+
+-   An **action client** sends a goal to an **action server**.
+-   The action server starts executing the goal and provides a continuous stream of **feedback** to the client (via a topic).
+-   When the task is complete, the server sends a final **result** to the client (via a service).
+
+The client can also send a **cancel request** at any time. Actions are perfect for tasks like "navigate to a location," "rotate the robot 360 degrees," or "pick up an object," where the process might take a significant amount of time and you want to monitor its progress.
+
+### The Role of DDS
+
+Under the hood, ROS 2 uses a middleware standard called **DDS (Data Distribution Service)** to handle all this communication. DDS is an industry standard for high-performance, real-time, and reliable data exchange.
+
+<Admonition type="info" title="Why DDS?">
+By building on top of DDS, ROS 2 inherits many powerful features out-of-the-box, including:
+- **Discovery**: Nodes automatically find each other on the network.
+- **Reliability**: Guarantees that messages are delivered, even on unreliable networks like Wi-Fi.
+- **Quality of Service (QoS)**: Fine-grained control over how data is transmitted (e.g., prioritizing sensor data over logs).
+- **Interoperability**: Different DDS vendors can communicate with each other, giving you flexibility.
+</Admonition>
+
+You don't need to be a DDS expert to use ROS 2, but understanding that it's the engine driving the communication helps explain many of ROS 2's powerful features.
+
+With these core concepts, you have the foundational knowledge to understand how ROS 2 systems are structured and how to start building your own robotic applications.

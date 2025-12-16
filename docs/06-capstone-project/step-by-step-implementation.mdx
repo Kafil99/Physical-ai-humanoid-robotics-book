@@ -1,0 +1,94 @@
+---
+id: step-by-step-implementation
+title: Step-by-step Implementation
+sidebar_position: 2
+slug: /06-capstone-project/step-by-step-implementation
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/Tabs';
+
+## Step-by-Step Implementation of the Autonomous Humanoid Assistant
+
+This chapter is the ultimate hands-on guide where we bring all the pieces together. We will build a comprehensive autonomous humanoid robot assistant, integrating the concepts and tools from every module in this book.
+
+### Project Setup and Overview
+
+#### 1. Choose Your Robot Platform
+-   **Simulated Robot (Recommended)**: For this implementation, we will primarily use a simulated humanoid robot within **NVIDIA Isaac Sim**. This allows us to focus on the software integration without the complexities and costs of physical hardware. Isaac Sim provides pre-built humanoid models and excellent ROS 2 integration.
+-   **Physical Robot (Optional)**: If you have access to a physical humanoid robot (e.g., Unitree H1, Agility Robotics Digit) with ROS 2 support, you can adapt these steps. Be aware that physical robots introduce additional challenges like safety, power management, and real-world sensor calibration.
+
+#### 2. Create Your ROS 2 Workspace
+Ensure you have a ROS 2 workspace set up, as described in **Module 1: ROS 2 Fundamentals**. We'll create a new package for our capstone project.
+```bash
+# Assuming you are in your ROS 2 workspace root (e.g., ~/ros2_ws)
+cd src
+ros2 pkg create --build-type ament_python my_humanoid_assistant
+cd ..
+colcon build --packages-select my_humanoid_assistant
+source install/setup.bash
+```
+
+### Step-by-Step Integration
+
+#### Phase 1: Base Robot Simulation Setup (Isaac Sim)
+
+1.  **Launch Isaac Sim**: Start NVIDIA Isaac Sim.
+2.  **Load Humanoid Robot**: Use the Isaac Sim Python API (or the UI) to load a humanoid robot model (e.g., the Franka Emika Panda for its arm, or a more complete humanoid if available).
+3.  **Setup ROS 2 Bridge**: Ensure the ROS 2 Bridge in Isaac Sim is configured to publish:
+    -   Joint states of the robot.
+    -   RGB-D camera streams (from the robot's "head" camera).
+    -   IMU data.
+    -   **Subscribe** to `/cmd_vel` for navigation and `/joint_group_command` (or similar) for arm control.
+4.  **Create an Environment**: Design a simple environment in Isaac Sim with a table and a few known objects (e.g., a "red ball," a "blue cube"). Export this scene as a USD file.
+    *   **Verification**: Run a simple ROS 2 `rqt_graph` and `ros2 topic list` to ensure all expected topics from Isaac Sim are being published.
+
+#### Phase 2: Voice Command Processing
+
+1.  **Whisper Node Integration**: Integrate the `whisper_node.py` from **Module 4: Voice-to-Action Pipeline**. Modify it to run as a ROS 2 node within your `my_humanoid_assistant` package.
+2.  **Test Voice-to-Text**: Run the Whisper node and speak commands. Verify that the `/transcribed_text` topic correctly publishes your speech as text.
+    *   **Verification**: `ros2 run my_humanoid_assistant whisper_node` and `ros2 topic echo /transcribed_text`.
+
+#### Phase 3: Cognitive Planning with LLMs
+
+1.  **Define Robot Functions**: Create a Python class (e.g., `RobotAPI`) within your package that encapsulates the robot's high-level actions (e.g., `move_to_location(location_name)`, `pick_up_object(object_name)`, `describe_environment()`, `answer_question(question)`). These will internally call ROS 2 services/topics.
+2.  **LLM Planner Node**: Implement the `CognitivePlanner` node from **Module 4: LLM Cognitive Planning**. This node will subscribe to `/transcribed_text`, integrate with an LLM (e.g., through OpenAI's API), and publish a sequence of `RobotAPI` function calls to an internal topic (e.g., `/robot_plan_commands`).
+    *   **Verification**: Publish text to `/transcribed_text` (e.g., `ros2 topic pub --once /transcribed_text std_msgs/String "data: 'Go to the table and pick up the red ball'"`). Observe the `/robot_plan_commands` topic for LLM-generated function calls.
+
+#### Phase 4: Autonomous Navigation (Nav2)
+
+1.  **Nav2 Setup**: Integrate the Nav2 stack as described in **Module 3: Nav2 Path Planning**.
+    -   Create a static map of your Isaac Sim environment.
+    -   Configure Nav2 parameters for your humanoid robot (adjusting for bipedal locomotion if applicable, otherwise treating it as a mobile base).
+    -   Ensure Nav2 is publishing `/cmd_vel` that your robot in Isaac Sim can subscribe to.
+2.  **Navigation Execution Node**: Create a node that subscribes to the LLM's `move_to_location` commands, translates them into Nav2 goals (e.g., `nav2_msgs/action/NavigateToPose`), and sends them to the Nav2 action server.
+    *   **Verification**: Send a navigation command (e.g., "Go to the kitchen") via voice. The robot should plan and execute a path to the kitchen in Isaac Sim.
+
+#### Phase 5: Object Manipulation
+
+1.  **Object Detection Node**: Use a pre-trained vision model (e.g., YOLO, or a simple color/shape detector if objects are distinct) to identify and localize objects in the robot's camera feed. Publish detected objects to a topic (e.g., `/detected_objects`).
+2.  **Manipulation Execution Node**: Create a node that subscribes to the LLM's `pick_up_object` commands.
+    -   When a pick-up command is received, it queries the `/detected_objects` topic to find the target object's pose.
+    -   It then uses a motion planning library (like MoveIt! in ROS 2) to plan a trajectory for the robot's arm to reach, grasp, and lift the object.
+    -   It commands the arm to execute the trajectory and the gripper to close.
+    *   **Verification**: Command the robot to pick up an object. Observe the arm moving and the gripper closing around the object in Isaac Sim.
+
+#### Phase 6: Full System Integration and Testing
+
+1.  **Launch File**: Create a comprehensive launch file that brings up all necessary nodes:
+    -   Isaac Sim (if launched via script).
+    -   ROS 2 Bridge (if external).
+    -   Whisper STT Node.
+    -   LLM Cognitive Planner Node.
+    -   Nav2 (all its components).
+    -   Object Detection Node.
+    -   Navigation Execution Node.
+    -   Manipulation Execution Node.
+2.  **Comprehensive Testing**:
+    -   **Voice Commands**: Test various commands: "Go to the red table," "Pick up the blue box," "What is in front of me?", "Tell me about the environment."
+    -   **Error Handling**: Test edge cases: asking for an object not present, giving ambiguous commands, commanding it to an unreachable location.
+    -   **Performance**: Monitor the system's responsiveness and latency between command and execution.
+3.  **Refinement**: Fine-tune parameters for perception, navigation, and manipulation for smoother operation.
+
+By successfully completing these steps, you will have built an impressive autonomous humanoid assistant that demonstrates a powerful integration of Perception, Planning, and Action—the true essence of Physical AI.

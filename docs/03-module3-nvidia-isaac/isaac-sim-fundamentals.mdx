@@ -1,0 +1,116 @@
+---
+id: isaac-sim-fundamentals
+title: Isaac Sim Fundamentals
+sidebar_position: 1
+slug: /03-module3-nvidia-isaac/isaac-sim-fundamentals
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Fundamentals of NVIDIA Isaac Sim: The Next Generation of Simulation
+
+Welcome to NVIDIA Isaac Sim, a cutting-edge robotics simulation platform built on NVIDIA's Omniverse. Isaac Sim is designed from the ground up to provide a photorealistic, physically-accurate, and scalable environment for developing, testing, and training AI-based robots.
+
+### What is NVIDIA Omniverse?
+
+**NVIDIA Omniverse** is a collaborative platform for 3D workflows and simulations. Think of it as a "Google Docs for 3D developers." It allows multiple users and applications to connect and interact with a shared, live 3D scene. This is made possible by its core technology: the **Universal Scene Description (USD)**.
+
+### The Power of USD (Universal Scene Description)
+
+**USD** is an open-source framework for exchanging 3D scene data, originally developed by Pixar Animation Studios. It's the backbone of Omniverse and Isaac Sim.
+
+-   **Composition**: USD allows you to create complex scenes by layering and composing smaller, independent assets. You can have a base environment, add lighting from another file, and then place your robot (also a USD file) into the scene, all non-destructively.
+-   **Collaboration**: Because scenes are composed of layers, multiple people can work on different parts of the same scene simultaneously. A roboticist can work on the robot's logic while an artist refines the environment's lighting.
+-   **Interoperability**: USD is designed to be a common language for 3D data, with connectors for many popular 3D applications like Blender, Maya, and 3ds Max.
+
+<div align="center">
+  <img src="/img/usd-composition.png" alt="USD Composition" width="600"/>
+  <p>A final scene in Isaac Sim is a composition of multiple USD layers.</p>
+</div>
+
+### Key Features of Isaac Sim
+
+Isaac Sim leverages Omniverse and USD to provide features specifically for robotics:
+
+-   **Photorealism**: With real-time ray tracing and path tracing powered by NVIDIA RTX GPUs, Isaac Sim can produce stunningly realistic visuals. This is crucial for training perception models that need to work in the real world.
+-   **Accurate Physics**: It includes a high-performance, GPU-accelerated physics engine (PhysX 5) that can simulate complex interactions, including rigid bodies, deformable materials, and fluids.
+-   **Sensor Simulation**: Isaac Sim provides a rich library of simulated sensors (RGB-D cameras, LiDAR, IMU) with realistic noise models.
+-   **Domain Randomization**: To improve the robustness of AI models, you can automatically randomize simulation parameters like lighting, textures, and object positions during training. This helps the model generalize from simulation to the real world.
+-   **Python-First API**: Most of the functionality in Isaac Sim can be controlled through a comprehensive Python API, making it easy to script complex simulations and training workflows.
+
+### Setting Up Your First Isaac Sim Scene
+
+Let's walk through the basic steps of creating and running a simple scene in Isaac Sim.
+
+#### 1. Install Omniverse Launcher and Isaac Sim
+-   Download and install the [NVIDIA Omniverse Launcher](https://www.nvidia.com/en-us/omniverse/download/).
+-   Inside the launcher, go to the "Exchange" tab and search for "Isaac Sim."
+-   Install Isaac Sim. (Note: This is a large download).
+
+#### 2. Launch Isaac Sim
+-   From the Omniverse Launcher's "Library" tab, launch Isaac Sim.
+-   The application will open, presenting you with an empty stage.
+
+#### 3. Create a Simple Scene
+You can use the Python API to create a scene programmatically. This allows for repeatable and scriptable setups.
+
+```python
+# A standalone Isaac Sim Python script
+from omni.isaac.kit import SimulationApp
+
+# Configuration for the simulation
+config = {
+    "renderer": "RayTracedLighting",
+    "headless": False,
+}
+
+# Start the simulation app
+simulation_app = SimulationApp(config)
+
+from omni.isaac.core import World
+from omni.isaac.core.objects import cuboid
+
+# Create a new world
+world = World()
+
+# Add a ground plane
+world.scene.add_default_ground_plane()
+
+# Add a simple cube to the scene
+cuboid.DynamicCuboid(
+    prim_path="/World/random_cube",
+    position=(0, 0, 1.0),
+    scale=(0.5, 0.5, 0.5),
+    color=(0, 0, 1), # Blue
+)
+
+# Add our robot to the scene
+# In a real scenario, you would load your robot from a USD file
+# For example:
+# from omni.isaac.core.robots import Robot
+# robot = world.scene.add(
+#     Robot(prim_path="/World/my_robot", name="my_robot", usd_path="/path/to/my_robot.usd")
+# )
+
+# Reset the world to its initial state
+world.reset()
+
+# Run the simulation loop
+while simulation_app.is_running():
+    world.step(render=True)
+    if world.is_playing():
+        if world.current_time_step_index == 0:
+            world.reset()
+        # Here you would add your robot logic
+        # e.g., read sensor data, compute actions, apply joint commands
+
+# Shutdown the simulation
+simulation_app.close()
+```
+<Admonition type="info" title="Running Standalone Scripts">
+You can run Isaac Sim Python scripts from the command line using the provided `python.sh` or `python.bat` executables, which ensures the correct environment is loaded.
+</Admonition>
+
+This script initializes the simulation, creates a world, adds a ground plane and a cube, and then runs the simulation loop. This programmatic approach is the foundation for building complex robotics applications, from simple sensor tests to large-scale reinforcement learning tasks. In the next chapter, we'll explore how to bridge this powerful simulation environment with ROS 2.

@@ -1,0 +1,49 @@
+---
+id: capstone-project-overview
+title: Capstone Project Overview
+sidebar_position: 1
+slug: /06-capstone-project/project-overview
+---
+
+## Capstone Project: Building Your Autonomous Humanoid Assistant
+
+Congratulations on making it this far! This capstone project is the culmination of everything you've learned in this book. You will now integrate the concepts, tools, and frameworks from previous modules to build a truly autonomous and intelligent humanoid robot assistant. This isn't just a theoretical exercise; it's a hands-on journey to bring a Physical AI to life, capable of understanding human commands, perceiving its environment, planning complex tasks, and physically interacting with the world.
+
+### The Vision: A Collaborative Humanoid
+
+Imagine a humanoid robot that can:
+-   **Understand natural language commands**: "Please fetch the blue cup from the table."
+-   **Visually perceive its surroundings**: Identify the table, the blue cup, and navigate to them.
+-   **Plan a sequence of actions**: Break down "fetch the blue cup" into "navigate to table," "identify cup," "reach for cup," "grasp cup," "return to user."
+-   **Execute physical actions**: Drive, walk, articulate its arm, and grasp objects.
+-   **Adapt to unexpected situations**: If the cup is not where expected, it should be able to ask for clarification or search for it.
+
+This capstone project aims to build a simplified version of such a system, focusing on the seamless integration of all the modules we've covered.
+
+### Project Goals
+
+1.  **Integrate Voice-to-Action Pipeline**: Connect a speech recognition system (OpenAI Whisper) and an LLM-based cognitive planner to translate natural language commands into robot actions.
+2.  **Perception and Localization**: Utilize a simulated (or physical) robot with sensors (camera, LiDAR) to perceive its environment and localize itself using Visual SLAM (VSLAM).
+3.  **Autonomous Navigation**: Implement the Nav2 stack to enable the robot to navigate to specified locations and avoid obstacles within its environment.
+4.  **Object Manipulation**: Develop the capability for the robot to identify and interact with objects, such as picking them up and placing them.
+5.  **Multi-modal Interaction**: Combine visual cues with verbal instructions to enhance the robot's understanding of user intent.
+6.  **Simulation and Real-world Deployment**: Develop and test the entire system in NVIDIA Isaac Sim, and discuss strategies for deployment onto a physical robot (e.g., NVIDIA Jetson).
+
+### Key Modules Integrated
+
+This project will draw heavily from the following modules:
+
+-   **Module 1: ROS 2 Fundamentals**: For inter-process communication and orchestrating the robot's software.
+-   **Module 2: Gazebo/Unity Simulation**: To provide a testing ground for the robot's behavior in a virtual environment.
+-   **Module 3: NVIDIA Isaac Platform**: For high-fidelity simulation, hardware-accelerated perception (Isaac ROS VSLAM), and potentially powerful navigation.
+-   **Module 4: VLA (Vision-Language-Action) Models**: To enable the robot to understand complex natural language commands and generate high-level plans.
+
+### What You Will Achieve
+
+By completing this capstone project, you will:
+-   **Gain hands-on experience** in integrating diverse robotics and AI technologies.
+-   **Develop a functional autonomous robot system** that responds to voice commands.
+-   **Understand the entire development lifecycle** from perception and planning to action.
+-   **Be equipped** to tackle more complex Physical AI challenges and build advanced robotic applications.
+
+This project is a significant undertaking, but it is broken down into manageable steps in the next chapter. Each step builds upon the foundational knowledge you've already acquired, guiding you through the exciting process of bringing your autonomous humanoid assistant to life.

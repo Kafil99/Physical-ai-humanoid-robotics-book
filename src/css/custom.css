@@ -1,0 +1,69 @@
+/**
+ * Any custom CSS here will be applied to the site.
+ */
+:root {
+  --ifm-color-primary: #2e8555;
+  --ifm-color-primary-dark: #29784c;
+  --ifm-color-primary-darker: #277148;
+  --ifm-color-primary-darkest: #205d3b;
+  --ifm-color-primary-light: #33925d;
+  --ifm-color-primary-lighter: #359962;
+  --ifm-color-primary-lightest: #3cad6e;
+}
+
+/* Feature section improvements */
+.container {
+  max-width: 1200px;
+}
+
+/* FIX: Remove gap from row and use proper Bootstrap grid */
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0 -15px; /* Bootstrap default negative margins */
+}
+
+.col.col--4 {
+  padding: 0 15px; /* Bootstrap default padding */
+  flex: 0 0 33.3333%;
+  max-width: 33.3333%;
+  box-sizing: border-box;
+}
+
+.card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  height: 100%;
+  margin-bottom: 0;
+}
+
+.card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* Ensure feature section has proper spacing */
+section {
+  padding: 4rem 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 996px) {
+  .col.col--4 {
+    flex: 0 0 50%;
+    max-width: 50%;
+    margin-bottom: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .col.col--4 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    margin-bottom: 1.5rem;
+  }
+  
+  section {
+    padding: 2rem 0;
+  }
+}

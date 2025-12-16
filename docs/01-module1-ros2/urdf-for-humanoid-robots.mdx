@@ -1,0 +1,168 @@
+---
+id: urdf-for-humanoid-robots
+title: URDF for Humanoid Robots
+sidebar_position: 4
+slug: /01-module1-ros2/urdf-for-humanoid-robots
+---
+
+import Admonition from '@theme/Admonition';
+
+## Describing Your Robot with URDF
+
+To simulate and control a robot, ROS needs a detailed description of its physical structure. The **Unified Robot Description Format (URDF)** is an XML-based format used to model a robot's physical properties.
+
+### Core Components of URDF
+
+A URDF file describes a robot as a tree of **links** connected by **joints**.
+
+1.  **`<link>`**: A link represents a rigid part of the robot, like a torso, an arm segment, or a wheel. Each link has physical properties:
+    -   `<inertial>`: Defines mass and rotational inertia.
+    -   `<visual>`: Defines how the link looks (shape, color, mesh). This is what you see in a visualizer like RViz.
+    -   `<collision>`: Defines the link's collision geometry. This is what the physics engine uses to calculate interactions. It's often a simpler shape than the visual model for performance reasons.
+
+2.  **`<joint>`**: A joint connects two links and defines their relative motion.
+    -   **`type`**: Can be `revolute` (rotating), `prismatic` (sliding), `continuous` (rotating without limits), `fixed` (no motion), etc.
+    -   **`parent`** and **`child`**: Defines the two links being connected.
+    -   **`origin`**: Specifies the pose (position and orientation) of the child link relative to the parent link.
+    -   **`axis`**: The axis of rotation or translation for `revolute` and `prismatic` joints.
+
+<div align="center">
+  <img src="/img/urdf-structure.png" alt="URDF Link/Joint Structure" width="600"/>
+  <p>A robot is a tree of links connected by joints, starting from a base_link.</p>
+</div>
+
+### Example: A Simple Humanoid URDF
+
+Let's create a URDF for a very simple humanoid robot with a torso, a head, and one arm.
+
+**File: `my_robot.urdf`**
+```xml
+<?xml version="1.0"?>
+<robot name="simple_humanoid">
+
+  <!-- Base Link (Torso) -->
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.2 0.3 0.5" />
+      </geometry>
+      <material name="blue">
+        <color rgba="0.0 0.0 0.8 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.2 0.3 0.5" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Head Link -->
+  <link name="head">
+    <visual>
+      <geometry>
+        <sphere radius="0.15" />
+      </geometry>
+      <material name="white">
+        <color rgba="1.0 1.0 1.0 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <sphere radius="0.15" />
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Head Joint (connects head to base_link) -->
+  <joint name="head_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="head"/>
+    <origin xyz="0 0 0.3" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Arm Link -->
+  <link name="arm_link">
+    <visual>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder length="0.4" radius="0.05"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <!-- Arm Joint (connects arm to base_link) -->
+  <joint name="arm_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="arm_link"/>
+    <origin xyz="0.125 0 0.1" rpy="0 1.57 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.57" upper="1.57" effort="10" velocity="1.0"/>
+  </joint>
+
+</robot>
+```
+
+### Visualizing the URDF in ROS 2
+
+To see your robot model, you can use **RViz2**, the standard visualizer for ROS. We need two ROS nodes to do this:
+
+1.  **`robot_state_publisher`**: Reads the URDF file and publishes the robot's structure as a transformation tree (`/tf`).
+2.  **`joint_state_publisher_gui`**: Provides a simple GUI with sliders to control the non-fixed joints of your robot.
+
+You can create a launch file to start everything at once.
+
+**File: `my_robot_display.launch.py`**
+```python
+import os
+from ament_index_python.packages import get_package_share_directory
+from launch import LaunchDescription
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    # Get the path to the URDF file
+    urdf_path = os.path.join(
+        get_package_share_directory('my_first_package'),
+        'urdf',
+        'my_robot.urdf'
+    )
+    
+    with open(urdf_path, 'r') as infp:
+        robot_desc = infp.read()
+
+    return LaunchDescription([
+        # Node to publish robot state
+        Node(
+            package='robot_state_publisher',
+            executable='robot_state_publisher',
+            name='robot_state_publisher',
+            output='screen',
+            parameters=[{'robot_description': robot_desc}]
+        ),
+        # GUI for controlling joint states
+        Node(
+            package='joint_state_publisher_gui',
+            executable='joint_state_publisher_gui',
+            name='joint_state_publisher_gui'
+        ),
+        # RViz2 for visualization
+        Node(
+            package='rviz2',
+            executable='rviz2',
+            name='rviz2',
+            output='screen',
+            arguments=['-d', os.path.join(get_package_share_directory('my_first_package'), 'config', 'display.rviz')]
+        )
+    ])
+```
+
+<Admonition type="tip">
+You would need to create a directory for your URDF file and a `config` directory for your RViz configuration file. This launch file assumes you have done so.
+</Admonition>
+
+When you run this launch file, RViz2 will open, and you will see your simple humanoid model. Using the `joint_state_publisher_gui` window, you can move the slider for the `arm_joint` and see the arm rotate in RViz2. This is a fundamental workflow for robot development: model, visualize, and test.

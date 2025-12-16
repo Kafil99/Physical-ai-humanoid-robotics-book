@@ -1,0 +1,187 @@
+---
+id: llm-cognitive-planning
+title: LLM Cognitive Planning
+sidebar_position: 3
+slug: /04-module4-vla/llm-cognitive-planning
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## LLM-Powered Cognitive Planning for Robots
+
+In the previous chapter, we saw how Large Language Models (LLMs) can enhance multi-modal interaction by interpreting complex natural language commands. But LLMs can go beyond just understanding; they can also be used for **cognitive planning**—translating high-level, abstract human goals into a series of concrete, executable robot actions.
+
+### The Need for Cognitive Planning
+
+Traditional robotics often relies on pre-programmed sequences of actions or intricate state machines. This approach struggles with:
+-   **Novelty**: Handling tasks that weren't explicitly coded.
+-   **Generality**: Adapting to variations in the environment or task instructions.
+-   **Flexibility**: Incorporating new tools or capabilities dynamically.
+
+LLM-powered cognitive planning offers a solution by enabling robots to:
+-   **Decompose Complex Tasks**: Break down a high-level goal ("make me coffee") into a sequence of smaller sub-tasks ("get mug," "place mug under dispenser," "press brew button").
+-   **Reason about the World**: Use their vast knowledge base to infer common-sense steps or preconditions.
+-   **Adapt to Constraints**: Adjust plans based on perceived environmental state or available tools.
+
+### Converting Natural Language to Robot Actions
+
+The core idea is to use the LLM as a "reasoning engine" that takes a human instruction and the robot's current capabilities/perceptions, and outputs a valid sequence of robot-executable functions.
+
+#### 1. Define Robot Capabilities as Functions
+
+First, you need to define the set of actions your robot can perform. These are essentially Python functions that abstract away the low-level ROS 2 calls.
+
+```python
+# robot_functions.py
+import rclpy
+from geometry_msgs.msg import PoseStamped, Twist
+from std_srvs.srv import Trigger
+
+class RobotAPI:
+    def __init__(self, node):
+        self.node = node
+        self.nav_publisher = self.node.create_publisher(PoseStamped, '/goal_pose', 10)
+        self.cmd_vel_publisher = self.node.create_publisher(Twist, '/cmd_vel', 10)
+        self.gripper_client = self.node.create_client(Trigger, '/gripper_service')
+
+    def move_to_pose(self, x: float, y: float, theta: float):
+        """Moves the robot to a specified 2D pose (x, y, orientation in radians)."""
+        self.node.get_logger().info(f"Moving to X:{x}, Y:{y}, Theta:{theta}")
+        goal_pose = PoseStamped()
+        goal_pose.header.frame_id = 'map'
+        goal_pose.pose.position.x = x
+        goal_pose.pose.position.y = y
+        # ... set orientation from theta
+        self.nav_publisher.publish(goal_pose)
+        return {"status": "moving"}
+
+    def pick_up_object(self, object_name: str):
+        """Activates the gripper to pick up a specified object."""
+        self.node.get_logger().info(f"Attempting to pick up {object_name}")
+        req = Trigger.Request()
+        future = self.gripper_client.call_async(req)
+        rclpy.spin_until_future_complete(self.node, future)
+        if future.result().success:
+            return {"status": "picked_up", "object": object_name}
+        else:
+            return {"status": "failed_to_pick_up", "reason": future.result().message}
+        
+    def say_text(self, text: str):
+        """Makes the robot speak a given text aloud."""
+        self.node.get_logger().info(f"Robot says: '{text}'")
+        # In a real system, this would publish to a text-to-speech topic
+        return {"status": "speaking", "text": text}
+```
+
+#### 2. Prompting the LLM for Planning
+
+You'll construct a prompt for the LLM that includes:
+-   The user's high-level goal.
+-   A description of the robot's available functions (from `RobotAPI`).
+-   The current state of the environment (e.g., objects detected by vision, robot's current position).
+-   Instructions to generate a sequence of function calls.
+
+```python
+# Conceptual LLM planning agent
+import json
+from openai import OpenAI # or other LLM client
+
+class CognitivePlanner:
+    def __init__(self, robot_api):
+        self.robot_api = robot_api
+        self.client = OpenAI() # Initialize your LLM client
+
+    def get_robot_functions_description(self):
+        """Returns a JSON schema description of robot functions."""
+        # This would be dynamically generated from RobotAPI, e.g., using inspect.signature
+        return [
+            {
+                "name": "move_to_pose",
+                "description": "Moves the robot to a specified 2D pose (x, y, orientation in radians).",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "x": {"type": "number"},
+                        "y": {"type": "number"},
+                        "theta": {"type": "number"},
+                    },
+                    "required": ["x", "y", "theta"],
+                },
+            },
+            {
+                "name": "pick_up_object",
+                "description": "Activates the gripper to pick up a specified object.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "object_name": {"type": "string"},
+                    },
+                    "required": ["object_name"],
+                },
+            },
+            {
+                "name": "say_text",
+                "description": "Makes the robot speak a given text aloud.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "text": {"type": "string"},
+                    },
+                    "required": ["text"],
+                },
+            },
+        ]
+
+    def plan_task(self, user_goal: str, current_state: dict):
+        """Uses LLM to generate a plan for the robot."""
+        messages = [
+            {"role": "system", "content": "You are a helpful robot assistant. Decompose complex human goals into a sequence of robot function calls. Only use the provided functions. If the goal is not achievable with the given functions, state so. Current state: " + json.dumps(current_state)},
+            {"role": "user", "content": user_goal},
+        ]
+
+        response = self.client.chat.completions.create(
+            model="gpt-4", # Or another suitable LLM
+            messages=messages,
+            functions=self.get_robot_functions_description(),
+            function_call="auto", # Let the LLM decide which function to call
+        )
+        
+        response_message = response.choices[0].message
+        if response_message.function_call:
+            function_name = response_message.function_call.name
+            function_args = json.loads(response_message.function_call.arguments)
+            return {"action": function_name, "args": function_args}
+        else:
+            return {"action": "respond_to_user", "message": response_message.content}
+
+# Example Usage
+if __name__ == "__main__":
+    rclpy.init(args=None)
+    node = rclpy.node.Node('planning_node')
+    robot_api = RobotAPI(node)
+    planner = CognitivePlanner(robot_api)
+
+    current_robot_state = {"robot_position": {"x": 0.0, "y": 0.0, "theta": 0.0}, "objects_in_view": ["red ball", "blue box"]}
+    user_goal = "Go to the kitchen and pick up the blue box."
+
+    plan = planner.plan_task(user_goal, current_robot_state)
+    print("Generated Plan:", plan)
+
+    # In a real system, you would execute the plan here
+    # e.g., if plan["action"] == "move_to_pose": robot_api.move_to_pose(**plan["args"])
+    rclpy.shutdown()
+```
+<Admonition type="caution" title="Execution and Iteration">
+The plan generated by the LLM is not always perfect. In a real system, this planning process is iterative. The robot would execute one step, update its state, and then query the LLM again for the next step, potentially re-planning if something unexpected happens.
+</Admonition>
+
+### Challenges and Future Directions
+
+-   **Symbolic Grounding**: Ensuring the LLM's abstract symbols ("blue box") are correctly mapped to the robot's sensor perceptions.
+-   **Safety and Reliability**: Guiding the LLM to generate safe and physically executable plans.
+-   **Long-Horizon Planning**: Handling very complex, multi-step tasks that require extensive foresight.
+-   **Human-in-the-Loop**: Designing interfaces where humans can monitor and correct LLM-generated plans.
+
+LLM-powered cognitive planning is a rapidly evolving field, promising to unlock unprecedented levels of autonomy and flexibility for robots, allowing them to understand and execute human instructions in a truly intelligent way.

@@ -1,0 +1,124 @@
+---
+id: robot-lab-options
+title: Robot Lab Options
+sidebar_position: 3
+slug: /05-hardware-guide/robot-lab-options
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/Tabs';
+
+## Exploring Robot Hardware Options for Your Lab
+
+Building a physical robotics lab is an exciting, but often challenging, endeavor. The choice of robot platform significantly impacts your research capabilities, development time, and budget. This chapter provides an overview of various robot types and platforms suitable for Physical AI research and development, helping you make informed decisions.
+
+### Factors to Consider When Choosing a Robot
+
+-   **Degrees of Freedom (DoF)**: How many independent motions the robot can make. More DoF means more dexterity but also more complexity.
+-   **Payload Capacity**: How much weight the robot can carry.
+-   **Reach/Workspace**: The area the robot can operate within.
+-   **Sensors**: Built-in cameras, LiDAR, force sensors, IMUs.
+-   **Actuators**: Type of motors, encoders, and controllers.
+-   **Software Ecosystem**: ROS 2 support, APIs, simulation models.
+-   **Cost**: Ranging from hundreds to hundreds of thousands of dollars.
+-   **Durability/Maintainability**: How easy it is to repair and maintain.
+
+### Robot Platform Categories
+
+#### 1. Wheeled Mobile Robots
+
+These are perhaps the most common entry point into mobile robotics.
+
+<div align="center">
+  <img src="/img/wheeled-robot.png" alt="Wheeled Mobile Robot" width="400"/>
+</div>
+
+-   **Description**: Typically have 2 or 4 wheels, often differential drive or omnidirectional. Designed for navigation on flat, relatively smooth surfaces.
+-   **Pros**:
+    -   Relatively inexpensive.
+    -   Easy to get started with navigation and mapping (SLAM).
+    -   High speeds possible.
+    -   Mature ROS 2 support.
+-   **Cons**:
+    -   Limited mobility on uneven terrain (stairs, rubble).
+    -   Cannot interact with objects using "legs" or manipulation.
+-   **Examples**:
+    -   **TurtleBot4**: A popular entry-level ROS 2 development platform.
+    -   **Jackal (Clearpath Robotics)**: A rugged, outdoor research platform.
+    -   **Custom Platforms**: Easy to build with off-the-shelf components.
+-   **Ideal For**: Research in navigation, mapping, mobile manipulation (when combined with an arm), multi-robot systems.
+
+#### 2. Legged Robots (Quadrupeds and Bipeds)
+
+These robots mimic animal or human locomotion, offering superior mobility in complex environments.
+
+<div align="center">
+  <img src="/img/legged-robot.png" alt="Legged Robot" width="400"/>
+</div>
+
+-   **Description**: Quadrupeds (4 legs, like dogs) or Bipeds (2 legs, like humans). Can traverse rough terrain, stairs, and step over obstacles.
+-   **Pros**:
+    -   High mobility and adaptability to varied terrain.
+    -   Can operate in environments designed for humans.
+    -   Excellent platforms for advanced control, balance, and locomotion research.
+-   **Cons**:
+    -   Significantly more expensive than wheeled robots.
+    -   Complex control systems required for stable locomotion.
+    -   Higher power consumption.
+-   **Examples**:
+    -   **Unitree Go2 / Go1**: Affordable quadruped robots for research and education.
+    -   **Boston Dynamics Spot**: High-end, robust quadruped for industrial and research applications.
+    -   **Unitree G1 / H1**: Emerging humanoid (bipedal) platforms.
+-   **Ideal For**: Locomotion research, inspection in challenging environments, human-robot interaction (humanoids).
+
+#### 3. Robotic Manipulators (Arms)
+
+Robotic arms are designed for precise manipulation of objects.
+
+<div align="center">
+  <img src="/img/robot-arm.png" alt="Robotic Manipulator" width="400"/>
+</div>
+
+-   **Description**: Typically fixed-base robots with multiple joints, designed to perform tasks like grasping, assembly, and welding.
+-   **Pros**:
+    -   High precision and repeatability.
+    -   Excellent for tasks requiring dexterity.
+    -   Mature software (MoveIt! for motion planning).
+-   **Cons**:
+    -   Limited workspace without a mobile base.
+    -   Can be very expensive, especially for industrial-grade arms.
+-   **Examples**:
+    -   **UR5/UR10 (Universal Robots)**: Collaborative robots ("cobots") popular in research and light industry.
+    -   **Franka Emika Panda**: High-precision, sensitive research robot.
+    -   **Robotiq Grippers**: End-effectors that attach to arms for grasping.
+-   **Ideal For**: Pick-and-place tasks, assembly, surgery, human-robot collaboration on manipulation tasks.
+
+#### 4. Hybrid Systems (Mobile Manipulators)
+
+Combining a mobile base with a robotic arm.
+
+<div align="center">
+  <img src="/img/mobile-manipulator.png" alt="Mobile Manipulator" width="400"/>
+</div>
+
+-   **Description**: A mobile platform (wheeled or legged) with a robotic arm mounted on top.
+-   **Pros**:
+    -   Combines mobility and manipulation capabilities.
+    -   Can perform tasks over a large area.
+-   **Cons**:
+    -   Very complex to control (mobile base control + arm control + coordination).
+    -   High cost and maintenance.
+-   **Examples**:
+    -   **Fetch Robotics Freight/Fetch Robot**: Mobile platform with a 7-DoF arm.
+    -   **Custom Integrations**: Mounting a UR or Franka arm on a mobile base.
+-   **Ideal For**: Logistics, service robotics, complex intervention tasks in large, unstructured environments.
+
+### Planning Your Robotics Lab
+
+1.  **Define Your Research Goals**: What problems are you trying to solve? This will heavily influence your robot choice.
+2.  **Budget**: Robotics hardware can be expensive. Consider open-source hardware designs or smaller platforms for entry-level research.
+3.  **Space**: Do you have a dedicated lab space? Consider safety implications for larger, more powerful robots.
+4.  **Team Expertise**: Does your team have the skills (mechanical, electrical, software) to build and maintain the chosen platform?
+
+Choosing the right platform is a foundational step for your Physical AI journey. Carefully evaluate your needs against the capabilities and constraints of each option.

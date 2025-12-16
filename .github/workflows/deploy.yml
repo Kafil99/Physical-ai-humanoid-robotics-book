@@ -1,0 +1,31 @@
+name: Deploy Docusaurus site to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 20.x
+      - run: npm install
+      - name: Run link checker
+        run: npx lychee --verbose --no-progress './build/**/*.html' || exit 1 # Exit with 1 if any broken links are found
+      - run: npm run build
+      - name: Install pa11y-ci
+        run: npm install -g pa11y-ci
+      - name: Run accessibility checks
+        run: pa11y-ci --threshold 0 "http://localhost:3000" --reporter json > pa11y-results.json || exit 1 # Assuming the build can be served locally for checking
+      - uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build
+          cname: kafil99.github.io

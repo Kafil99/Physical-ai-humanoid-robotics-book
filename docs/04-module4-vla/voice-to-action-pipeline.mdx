@@ -1,0 +1,171 @@
+---
+id: voice-to-action-pipeline
+title: Voice-to-Action Pipeline
+sidebar_position: 1
+slug: /04-module4-vla/voice-to-action-pipeline
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Building a Voice-to-Action Pipeline
+
+The ultimate goal of many robotics applications is to create a seamless interface between humans and machines. One of the most natural ways for humans to communicate is through voice. In this chapter, we will build a **Voice-to-Action pipeline** that allows you to control your robot using spoken commands.
+
+### The Three Stages of a Voice-to-Action Pipeline
+
+Our pipeline will consist of three main stages:
+
+1.  **Speech-to-Text (STT)**: Capturing audio from a microphone and transcribing it into text. We will use **OpenAI's Whisper** for this, a state-of-the-art, open-source model that provides highly accurate transcription.
+2.  **Intent Recognition**: Analyzing the transcribed text to understand the user's *intent*. This could be a simple keyword match (e.g., if the text contains "move forward") or a more complex Natural Language Understanding (NLU) model.
+3.  **Action Execution**: Mapping the recognized intent to a specific robot action, such as publishing a message to a ROS 2 topic or calling a ROS 2 service.
+
+<div align="center">
+  <img src="/img/voice-pipeline.png" alt="Voice-to-Action Pipeline" width="800"/>
+</div>
+
+### Step 1: Setting up the Speech-to-Text Node
+
+This ROS 2 node will be responsible for listening to the microphone and using Whisper to transcribe the audio.
+
+#### Prerequisites
+-   You'll need a microphone connected to your computer.
+-   Install the OpenAI Whisper library:
+    ```bash
+    pip install openai-whisper
+    ```
+-   You may also need to install `ffmpeg`: `sudo apt update && sudo apt install ffmpeg`
+
+#### The Whisper ROS 2 Node
+Let's create a node that listens for audio, transcribes it, and publishes the resulting text to a ROS 2 topic.
+
+```python
+# whisper_node.py
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+import speech_recognition as sr
+import whisper
+
+class WhisperSTTNode(Node):
+    def __init__(self):
+        super().__init__('whisper_stt_node')
+        self.publisher_ = self.create_publisher(String, '/transcribed_text', 10)
+        self.recognizer = sr.Recognizer()
+        self.microphone = sr.Microphone()
+        
+        # Load the Whisper model
+        self.model = whisper.load_model("base.en") # "base.en" is a good starting point
+        self.get_logger().info("Whisper STT Node has been started. Listening...")
+
+        self.listen_for_audio()
+
+    def listen_for_audio(self):
+        with self.microphone as source:
+            self.recognizer.adjust_for_ambient_noise(source)
+            while rclpy.ok():
+                try:
+                    audio = self.recognizer.listen(source, timeout=5, phrase_time_limit=5)
+                    # Transcribe the audio to text
+                    text = self.recognizer.recognize_whisper(audio, model="base.en")
+                    self.get_logger().info(f'Whisper thinks you said: "{text}"')
+                    
+                    # Publish the transcribed text
+                    msg = String()
+                    msg.data = text
+                    self.publisher_.publish(msg)
+
+                except sr.WaitTimeoutError:
+                    self.get_logger().info("Listening, but heard nothing.")
+                except Exception as e:
+                    self.get_logger().error(f"Error during transcription: {e}")
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = WhisperSTTNode()
+    # We don't spin() because the listening loop handles it.
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+<Admonition type="caution" title="SpeechRecognition Library">
+This example uses the `SpeechRecognition` library as a convenient wrapper around the microphone and Whisper. You can install it with `pip install SpeechRecognition`.
+</Admonition>
+
+### Step 2: Creating the Intent Recognition Node
+
+This node will subscribe to the `/transcribed_text` topic and decide what action the robot should take. For this example, we'll use simple keyword matching.
+
+```python
+# intent_recognition_node.py
+import rclpy
+from rclpy.node import Node
+from std_msgs.msg import String
+from geometry_msgs.msg import Twist
+
+class IntentRecognitionNode(Node):
+    def __init__(self):
+        super().__init__('intent_recognition_node')
+        self.subscription = self.create_subscription(
+            String,
+            '/transcribed_text',
+            self.listener_callback,
+            10)
+        
+        # Publisher to send velocity commands to the robot's base
+        self.cmd_vel_publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)
+        
+        self.get_logger().info('Intent Recognition Node has been started.')
+
+    def listener_callback(self, msg):
+        command = msg.data.lower()
+        self.get_logger().info(f'Received command: "{command}"')
+        
+        twist_msg = Twist()
+        
+        if "move forward" in command:
+            self.get_logger().info("Intent: Move Forward")
+            twist_msg.linear.x = 0.5
+        elif "stop" in command:
+            self.get_logger().info("Intent: Stop")
+            # All values are 0.0 by default
+        elif "turn left" in command:
+            self.get_logger().info("Intent: Turn Left")
+            twist_msg.angular.z = 0.5
+        elif "turn right" in command:
+            self.get_logger().info("Intent: Turn Right")
+            twist_msg.angular.z = -0.5
+        else:
+            self.get_logger().warn(f"Unknown command: '{command}'")
+            return
+
+        self.cmd_vel_publisher_.publish(twist_msg)
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = IntentRecognitionNode()
+    rclpy.spin(node)
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+```
+
+### Step 3: Running the Full Pipeline
+
+To run the full system, you would:
+1.  **Start your robot simulation**: Launch your robot in Gazebo or Isaac Sim. Make sure it's subscribing to the `/cmd_vel` topic to receive velocity commands.
+2.  **Run the STT Node**:
+    ```bash
+    ros2 run your_package_name whisper_node
+    ```
+3.  **Run the Intent Recognition Node**:
+    ```bash
+    ros2 run your_package_name intent_recognition_node
+    ```
+
+Now, when you speak into your microphone, the `whisper_node` will transcribe your speech, publish it to the `/transcribed_text` topic. The `intent_recognition_node` will receive the text, parse it for keywords, and publish a `Twist` message to the `/cmd_vel` topic, causing your simulated robot to move.
+
+This simple pipeline is the foundation of voice-controlled robotics. In the next chapter, we'll explore how to replace the simple keyword matching with a powerful Large Language Model (LLM) to handle much more complex and natural commands.

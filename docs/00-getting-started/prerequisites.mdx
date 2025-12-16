@@ -1,0 +1,67 @@
+---
+id: prerequisites
+title: Prerequisites
+sidebar_position: 2
+slug: /00-getting-started/prerequisites
+---
+
+import Admonition from '@theme/Admonition';
+
+## Prerequisites for Your Journey into Physical AI
+
+Before diving into the hands-on projects in this book, it's important to ensure you have the foundational knowledge and the right setup. This chapter details the technical background, software, and hardware you'll need to make the most of your learning experience.
+
+### Recommended Technical Background
+
+While this book is designed to be a practical guide, a basic understanding of the following concepts will be highly beneficial.
+
+<Admonition type="info" title="Who is this book for?">
+This book is aimed at intermediate to advanced developers, university students (upper-level undergraduate or graduate), and robotics researchers who have some programming experience and want to bridge the gap between AI theory and real-world robotic systems.
+</Admonition>
+
+-   **Programming Fundamentals (Python & C++)**:
+    -   **Python**: You should be comfortable with intermediate Python, including object-oriented programming (classes and objects), data structures (lists, dictionaries), and writing scripts. Python will be our primary language for high-level AI and application logic.
+    -   **C++**: Basic knowledge is recommended. While most of our work will be in Python, high-performance robotics often requires C++ for drivers, control loops, and computationally intensive nodes. We'll provide C++ examples for key concepts.
+
+-   **Linux and Command-Line Interface (CLI)**:
+    -   You must be comfortable working in a Linux environment, specifically **Ubuntu 22.04 LTS**.
+    -   Proficiency with basic shell commands (`ls`, `cd`, `mkdir`, `grep`, `source`) and text editors (like VS Code, Vim, or Nano) is essential for navigating, managing files, and running the robotics software.
+
+-   **Version Control with Git**:
+    -   All project code is managed with Git and hosted on GitHub. You should know how to `clone` a repository, `add` and `commit` changes, and `push` your work.
+
+-   **Basic Concepts in AI/Machine Learning**:
+    -   Having a conceptual understanding of what machine learning is, especially deep learning and neural networks, will be helpful. You don't need to be an expert, but familiarity with terms like "training," "inference," and "model" will provide useful context.
+
+### Required Software Stack
+
+This is the core software stack we will use throughout the book. Please ensure these are installed and configured correctly as detailed in the **Workstation Setup** chapter.
+
+| Software              | Version                 | Purpose                                                                                             |
+| --------------------- | ----------------------- | --------------------------------------------------------------------------------------------------- |
+| **Operating System**  | Ubuntu 22.04 LTS        | The primary development and deployment OS for the ROS 2 ecosystem.                                  |
+| **Robotics Framework**| ROS 2 Humble or Iron    | The fundamental communication middleware for our robotic components.                                |
+| **Simulation**        | Gazebo (Ignition)       | A powerful physics simulator for testing robot behavior in a controlled, digital environment.         |
+- **Visualization**     | RViz2                   | The standard tool for visualizing ROS 2 data, including sensor streams, robot models, and maps.     |
+| **NVIDIA Stack**      | Isaac Sim & ROS Bridge  | For high-fidelity, photorealistic simulation and bridging NVIDIA's AI tools with ROS 2.             |
+| **Containerization**  | Docker & Docker Compose | To ensure a consistent and reproducible development environment across different machines.            |
+| **Code Editor**       | Visual Studio Code      | The recommended editor, with powerful extensions for Python, C++, ROS, and Docker development.      |
+
+### Recommended Hardware
+
+While much of this book can be completed using simulation, building a physical robot is the ultimate goal of Physical AI. The hardware is divided into two main categories.
+
+-   **Development Workstation**:
+    -   A powerful computer is required for running the simulations, especially NVIDIA Isaac Sim.
+    -   **CPU**: Modern Intel Core i7 / AMD Ryzen 7 or better (8+ cores recommended).
+    -   **RAM**: 32 GB is the minimum for running Isaac Sim; 64 GB is highly recommended.
+    -   **GPU**: An **NVIDIA RTX-series GPU** is **required** for Isaac Sim. An RTX 3070 or better is recommended for a smooth experience.
+    -   **Storage**: A fast NVMe SSD with at least 100 GB of free space.
+
+<Admonition type="danger" title="NVIDIA GPU Requirement">
+A compatible NVIDIA RTX GPU is not optional for the NVIDIA Isaac Sim modules. If you do not have one, you will still be able to complete the ROS 2 and Gazebo sections, but you will not be able to run the more advanced simulations. See the **Digital Twin Workstation** chapter for cloud-based alternatives.
+</Admonition>
+
+-   **Physical Robot (Optional but Recommended)**:
+    -   The capstone project will guide you through building or integrating a physical system. The hardware guide provides several options, from DIY kits to pre-built platforms, to fit different budgets and skill levels.
+    -   Having a physical robot allows you to experience the full "sim-to-real" workflow and the unique challenges of real-world robotics.

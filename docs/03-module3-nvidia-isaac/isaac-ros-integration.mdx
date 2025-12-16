@@ -1,0 +1,124 @@
+---
+id: isaac-ros-integration
+title: Isaac ROS Integration
+sidebar_position: 2
+slug: /03-module3-nvidia-isaac/isaac-ros-integration
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Integrating Isaac ROS for Accelerated Perception
+
+While Isaac Sim provides a world-class simulation environment, the **Isaac ROS** project provides a collection of hardware-accelerated ROS 2 packages that are optimized for NVIDIA's Jetson platform and GPUs. These packages are designed to give your robot high-performance perception capabilities.
+
+### Why Use Isaac ROS?
+
+Standard ROS 2 perception packages (like those for SLAM or object detection) typically run on the CPU. This can become a bottleneck for complex algorithms or high-resolution sensor data. Isaac ROS leverages the parallel processing power of NVIDIA GPUs to significantly speed up these tasks.
+
+Key benefits include:
+-   **Hardware Acceleration**: Most computation is offloaded to the GPU, freeing up the CPU for other tasks like navigation and control.
+-   **High Performance**: Achieves real-time performance for demanding tasks like stereo depth estimation and Visual SLAM.
+-   **Optimized for NVIDIA Hardware**: Tightly integrated with NVIDIA's libraries (CUDA, TensorRT) and hardware (Jetson, RTX GPUs).
+-   **ROS 2 Compliant**: Behaves like any other ROS 2 package, using standard messages and topics.
+
+### Focus: Visual SLAM (VSLAM)
+
+A critical capability for any autonomous mobile robot is **Simultaneous Localization and Mapping (SLAM)**. SLAM is the process of building a map of an unknown environment while simultaneously keeping track of the robot's location within that map.
+
+**Visual SLAM (VSLAM)** accomplishes this using camera data as its primary input. The Isaac ROS VSLAM package is a GPU-accelerated solution that provides robust and real-time tracking.
+
+<div align="center">
+  <img src="/img/vslam-pipeline.png" alt="VSLAM Pipeline" width="800"/>
+  <p>The Isaac ROS VSLAM pipeline.</p>
+</div>
+
+### Setting Up Isaac ROS VSLAM
+
+Let's walk through the steps to set up and run the Isaac ROS VSLAM package with a simulated robot in Isaac Sim.
+
+#### Step 1: Install Isaac ROS Common
+Isaac ROS packages are best used within a Docker container to manage all the complex dependencies.
+```bash
+# Clone the Isaac ROS common utilities
+git clone https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_common.git
+cd isaac_ros_common
+
+# Run the setup script to pull the latest Docker container
+# This will also set up your environment to be able to build and run Isaac ROS packages
+./scripts/run_dev.sh
+```
+This script will drop you inside a Docker container that has ROS 2, CUDA, and all the necessary NVIDIA libraries pre-installed.
+
+#### Step 2: Build the VSLAM Package
+Inside the Docker container, you will build the VSLAM node.
+
+```bash
+# Inside the container
+# Clone the VSLAM repository
+git clone https://github.com/NVIDIA-ISAAC-ROS/isaac_ros_visual_slam.git
+
+# Build the package
+colcon build --symlink-install --packages-select isaac_ros_visual_slam
+```
+
+#### Step 3: Configure and Launch VSLAM
+The Isaac ROS VSLAM package comes with a launch file that starts the VSLAM node and its dependencies. You typically need to provide it with camera data.
+
+A typical VSLAM launch file looks like this:
+
+```python
+# isaac_ros_vslam.launch.py
+from launch import LaunchDescription
+from launch_ros.actions import ComposableNodeContainer
+from launch_ros.descriptions import ComposableNode
+
+def generate_launch_description():
+    """Launch file for Isaac ROS vslam."""
+    
+    visual_slam_node = ComposableNode(
+        name='visual_slam_node',
+        package='isaac_ros_visual_slam',
+        plugin='isaac_ros::visual_slam::VisualSlamNode',
+        parameters=[{
+            'use_sim_time': True,
+            # ... other parameters
+        }],
+        remappings=[
+            ('stereo_camera/left/image', '/left/image_raw'),
+            ('stereo_camera/left/camera_info', '/left/camera_info'),
+            ('stereo_camera/right/image', '/right/image_raw'),
+            ('stereo_camera/right/camera_info', '/right/camera_info'),
+        ]
+    )
+
+    container = ComposableNodeContainer(
+        name='vslam_container',
+        namespace='',
+        package='rclcpp_components',
+        executable='component_container',
+        composable_node_descriptions=[visual_slam_node],
+        output='screen'
+    )
+
+    return LaunchDescription([container])
+```
+<Admonition type="info" title="Composable Nodes">
+Isaac ROS makes heavy use of **Composable Nodes**. This is a ROS 2 feature that allows multiple nodes to run within the same process, avoiding memory copies and significantly improving performance for perception pipelines.
+</Admonition>
+
+#### Step 4: Run the Full System
+To run the full system, you would:
+1.  **Launch Isaac Sim**: Start your Isaac Sim simulation with a robot that has a stereo camera. Configure the ROS bridge in Isaac Sim to publish the left and right camera images and their calibration data.
+2.  **Launch the ROS-TCP-Endpoint**: This bridges Isaac Sim with the ROS 2 network.
+3.  **Launch the VSLAM Node**: Inside the Isaac ROS Docker container, run your launch file.
+    ```bash
+    ros2 launch isaac_ros_visual_slam isaac_ros_vslam.launch.py
+    ```
+
+As your robot moves around in Isaac Sim, the VSLAM node will process the camera images and:
+-   Publish the robot's estimated position and orientation (the `pose` topic).
+-   Publish the map it is building (as a `PointCloud2` message).
+
+You can visualize all of this in RViz2 to see your robot localizing itself and building a map of its simulated world in real-time, all accelerated by the power of your GPU. This high-performance perception is a critical building block for enabling autonomous navigation, which we will cover next.

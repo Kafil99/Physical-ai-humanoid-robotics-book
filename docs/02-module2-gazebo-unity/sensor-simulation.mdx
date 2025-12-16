@@ -1,0 +1,166 @@
+---
+id: sensor-simulation
+title: Sensor Simulation
+sidebar_position: 3
+slug: /02-module2-gazebo-unity/sensor-simulation
+---
+
+import Admonition from '@theme/Admonition';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+## Simulating Robot Sensors in Gazebo
+
+For a robot to perceive its environment, it needs sensors. Gazebo provides a powerful set of plugins to simulate a wide variety of common robotic sensors, such as cameras, LiDAR, and IMUs. These simulated sensors publish their data to ROS 2 topics, just like real hardware would, allowing you to use the exact same software for both simulation and the physical robot.
+
+### How Sensor Simulation Works
+
+Gazebo simulates sensors by attaching them to a robot's **link**. The sensor plugin then uses the physics engine's world data to generate realistic sensor readings. For example, a simulated LiDAR works by casting virtual rays into the environment and calculating where they intersect with objects.
+
+### Adding a Lidar Sensor
+
+Let's add a 2D LiDAR sensor to our robot model. We will modify the URDF file by adding a new link for the sensor and a `gazebo` tag to configure the plugin.
+
+**File: `my_robot.urdf` (additions)**
+```xml
+  <!-- ... (existing links and joints) ... -->
+
+  <!-- Lidar Link -->
+  <link name="lidar_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.05" length="0.04"/>
+      </geometry>
+      <material name="red">
+        <color rgba="1.0 0.0 0.0 1.0"/>
+      </material>
+    </visual>
+  </link>
+
+  <!-- Lidar Joint -->
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="lidar_link"/>
+    <origin xyz="0 0 0.40" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Gazebo Plugin for Lidar -->
+  <gazebo reference="lidar_link">
+    <sensor type="ray" name="lidar_sensor">
+      <pose>0 0 0 0 0 0</pose>
+      <visualize>true</visualize>
+      <update_rate>10</update_rate>
+      <ray>
+        <scan>
+          <horizontal>
+            <samples>720</samples>
+            <resolution>1</resolution>
+            <min_angle>-1.5708</min_angle>
+            <max_angle>1.5708</max_angle>
+          </horizontal>
+        </scan>
+        <range>
+          <min>0.10</min>
+          <max>30.0</max>
+          <resolution>0.01</resolution>
+        </range>
+      </ray>
+      <plugin name="gazebo_ros_head_hokuyo_controller" filename="libgazebo_ros_ray_sensor.so">
+        <ros>
+          <namespace>/demo</namespace>
+          <argument>--ros-args -r /demo/scan:=/scan</argument>
+        </ros>
+        <output_type>sensor_msgs/LaserScan</output_type>
+      </plugin>
+    </sensor>
+  </gazebo>
+```
+-   `<gazebo reference="lidar_link">`: This block tells Gazebo to attach the following plugin to the `lidar_link`.
+-   `<sensor type="ray">`: Specifies a ray-based sensor, like a LiDAR.
+-   `<scan>`: Defines the properties of the laser scan, like the number of samples and the field of view.
+-   `<plugin>`: This is the crucial part. It loads the `libgazebo_ros_ray_sensor.so` plugin, which is responsible for generating the `sensor_msgs/LaserScan` messages and publishing them to a ROS 2 topic.
+-   `<argument>`: We use this to remap the default topic from `/demo/scan` to just `/scan`.
+
+### Adding a Depth Camera
+
+A depth camera is like a regular camera, but it also provides distance information for each pixel. This is simulated in Gazebo using the `depth_camera` plugin.
+
+**File: `my_robot.urdf` (additions)**
+```xml
+  <!-- ... (existing links and joints) ... -->
+  
+  <!-- Camera link -->
+  <link name="camera_link">
+    <visual>
+       <geometry>
+        <box size="0.05 0.05 0.05"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+  </link>
+  
+  <joint name="camera_joint" type="fixed">
+    <parent link="head"/>
+    <child link="camera_link"/>
+    <origin xyz="0.1 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Gazebo Plugin for Depth Camera -->
+  <gazebo reference="camera_link">
+    <sensor type="depth" name="camera_sensor">
+      <update_rate>30.0</update_rate>
+      <camera name="head">
+        <horizontal_fov>1.39626</horizontal_fov>
+        <image>
+          <width>800</width>
+          <height>800</height>
+          <format>R8G8B8</format>
+        </image>
+        <clip>
+          <near>0.02</near>
+          <far>300</far>
+        </clip>
+      </camera>
+      <plugin name="camera_controller" filename="libgazebo_ros_camera.so">
+        <ros>
+          <namespace>/demo</namespace>
+          <argument>--ros-args -r image_raw:=image_raw</argument>
+          <argument>--ros-args -r depth/image_raw:=depth/image_raw</argument>
+          <argument>--ros-args -r camera_info:=camera_info</argument>
+        </ros>
+        <camera_name>camera</camera_name>
+      </plugin>
+    </sensor>
+  </gazebo>
+```
+-   `<sensor type="depth">`: Specifies a depth camera sensor.
+-   `<camera>`: Defines the camera's intrinsic parameters, like field of view and image resolution.
+-   `<plugin>`: Loads the `libgazebo_ros_camera.so` plugin, which publishes multiple topics: an RGB image (`image_raw`), a depth image (`depth/image_raw`), and camera calibration information (`camera_info`).
+
+### Verifying Sensor Output
+
+After adding these sensors to your URDF and re-running your launch file, you can verify that they are working using ROS 2 command-line tools.
+
+1.  **List Topics**:
+    ```bash
+    ros2 topic list
+    ```
+    You should see `/scan`, `/demo/image_raw`, `/demo/depth/image_raw`, and other topics being published.
+
+2.  **Echo Sensor Data**:
+    ```bash
+    # To see the LiDAR data
+    ros2 topic echo /scan
+
+    # To see the camera image data (this will be a lot of numbers)
+    ros2 topic echo /demo/image_raw
+    ```
+
+3.  **Visualize in RViz2**:
+    The best way to verify sensor data is to visualize it.
+    -   Run RViz2: `rviz2`
+    -   Click "Add" and choose "By topic".
+    -   Add a `LaserScan` display for the `/scan` topic. You will see the LiDAR points in the 3D view.
+    -   Add an `Image` display for the `/demo/image_raw` topic. You will see the camera's view.
+
+By adding and configuring these sensor plugins, you can create a rich simulation environment that allows you to develop and test sophisticated perception and navigation algorithms before ever touching a physical robot.
