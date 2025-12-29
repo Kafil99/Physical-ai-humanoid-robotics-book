@@ -1,4 +1,8 @@
 # main.py
+import uvicorn
+from fastapi import FastAPI
+from chatbot_api import router as chatbot_router
+
 # This script will contain the logic for the RAG content ingestion pipeline.
 
 import os
@@ -9,6 +13,10 @@ import cohere
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient, models
 import logging
+
+# --- FastAPI App Setup ---
+app = FastAPI()
+app.include_router(chatbot_router, prefix="/api")
 
 # --- Logging Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -139,7 +147,7 @@ def save_chunks_to_qdrant(qd_client: QdrantClient, collection_name: str, chunks:
     except Exception as e:
         logging.error(f"Error saving chunks to Qdrant: {e}")
 
-def main():
+def run_ingestion():
     """Main function to orchestrate the ingestion pipeline."""
     logging.info("RAG Content Ingestion Pipeline Started")
     SITEMAP_URL = "https://physical-ai-humanoid-robotics-book-pink-delta.vercel.app/sitemap.xml"
@@ -189,4 +197,11 @@ def main():
     logging.info("--- Ingestion complete! ---")
 
 if __name__ == "__main__":
-    main()
+    # This block allows running the ingestion script directly
+    # e.g., `python backend/main.py ingest`
+    import sys
+    if len(sys.argv) > 1 and sys.argv[1] == "ingest":
+        run_ingestion()
+    else:
+        # This will run the FastAPI app
+        uvicorn.run(app, host="0.0.0.0", port=8000)
