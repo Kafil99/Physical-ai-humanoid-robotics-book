@@ -1,0 +1,17 @@
+[project]
+name = "rag-content-pipeline"
+version = "0.1.0"
+description = "A pipeline to ingest content for a RAG chatbot."
+dependencies = [
+    "requests",
+    "beautifulsoup4",
+    "cohere",
+    "qdrant-client",
+    "python-dotenv",
+    "lxml>=6.0.2",
+    "openai",
+    "openai-agent>=0.1.0",
+]
+
+[tool.uv]
+dev-dependencies = []

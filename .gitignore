@@ -80,4 +80,21 @@ build/
 .vscode/
 
 # Gemini CLI
+
 .gemini/settings.json
+
+
+
+# Python
+
+__pycache__/
+
+*.pyc
+
+.venv/
+
+venv/
+
+dist/
+
+*.egg-info/
