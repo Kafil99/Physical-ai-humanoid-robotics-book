@@ -38,7 +38,8 @@ export default function ChatContainer({ selectedText, selectionRect, setSelected
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response.json(); // Attempt to read error detail from backend
+        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
@@ -49,7 +50,7 @@ export default function ChatContainer({ selectedText, selectionRect, setSelected
       const errorMessage = {
         id: Date.now() + 1,
         sender: 'agent',
-        content: "Oops! Something went wrong. Please try again.",
+        content: `Error: ${error.message}` || "Oops! Something went wrong. Please try again.",
       };
       setMessages((prevMessages) => [...prevMessages, errorMessage]);
     } finally {
@@ -66,9 +67,9 @@ export default function ChatContainer({ selectedText, selectionRect, setSelected
 
 
   return (
-    <div className="fixed bottom-8 right-8 z-50">
+    <>
       {isOpen && (
-        <div className="absolute bottom-full right-0 mb-4">
+        <div className="fixed bottom-24 right-8 z-[100]">
           <ChatWindow messages={messages} onSendMessage={handleSendMessage} loading={loading} />
         </div>
       )}
@@ -79,6 +80,7 @@ export default function ChatContainer({ selectedText, selectionRect, setSelected
             position: 'absolute',
             left: selectionRect.left,
             top: selectionRect.top - 40, // Position above the selection
+            zIndex: 99, // Ensure it's above other content but below chatbot window
           }}
         >
           Ask about selection
@@ -86,11 +88,11 @@ export default function ChatContainer({ selectedText, selectionRect, setSelected
       )}
       <button
         onClick={toggleChat}
-        className="w-16 h-16 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-3xl"
+        className="fixed bottom-8 right-8 z-[101] w-16 h-16 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-3xl" // Ensure button is above chat window when closed
         aria-label="Toggle Chat"
       >
         {isOpen ? 'X' : '💬'}
       </button>
-    </div>
+    </>
   );
 }

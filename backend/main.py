@@ -1,6 +1,7 @@
 # main.py
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from chatbot_api import router as chatbot_router
 
 # This script will contain the logic for the RAG content ingestion pipeline.
@@ -16,6 +17,20 @@ import logging
 
 # --- FastAPI App Setup ---
 app = FastAPI()
+
+# Add CORS middleware to allow requests from the Docusaurus frontend
+origins = [
+    "http://localhost:3000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(chatbot_router, prefix="/api")
 
 # --- Logging Setup ---
