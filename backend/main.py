@@ -18,6 +18,10 @@ import logging
 # --- FastAPI App Setup ---
 app = FastAPI()
 
+@app.get("/")
+def read_root():
+    return {"status": "online"}
+
 # Add CORS middleware to allow requests from the Docusaurus frontend
 origins = [
     "http://localhost:3000",

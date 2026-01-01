@@ -1,98 +1,137 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ChatWindow from './ChatWindow';
 import FloatingActionButton from './FloatingActionButton';
+import { BsChatDots, BsX } from 'react-icons/bs';
 
-export default function ChatContainer({ selectedText, selectionRect, setSelectedText, setSelectionRect }) {
+/**
+ * The single root component for the chatbot UI system.
+ * It handles all state, including visibility (isOpen), messages, and text selection.
+ * Its direct child, the main div, establishes the fixed positioning context.
+ */
+export default function ChatContainer() {
+  // Single source of truth for chat window visibility. Defaults to closed.
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([]);
+  
+  const [messages, setMessages] = useState([
+    { id: 'init', sender: 'agent', content: 'Hello! Ask me a question, or select text from the book to get an explanation.' }
+  ]);
   const [loading, setLoading] = useState(false);
+  const [selectedText, setSelectedText] = useState(null);
+  const [selectionRect, setSelectionRect] = useState(null);
+  const [isContextPrimed, setIsContextPrimed] = useState(false);
 
-  const toggleChat = () => {
-    setIsOpen(!isOpen);
-    // Clear selected text when chat is closed
-    if (isOpen) {
-      setSelectedText(null);
-      setSelectionRect(null);
-    }
-  };
+  // Reliable text selection listener
+  useEffect(() => {
+    const handleMouseUp = (event) => {
+      // Prevents the chatbot UI from triggering text selection for itself
+      if (event.target.closest('.chatbot-container')) {
+        return;
+      }
+      const text = window.getSelection().toString().trim();
+      if (text.length > 15) { // Sensible minimum selection length
+        const range = window.getSelection().getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        setSelectedText(text);
+        setSelectionRect({ left: rect.left + window.scrollX, top: rect.top + window.scrollY });
+        setIsContextPrimed(false); // A new selection always requires re-priming
+      } else {
+        setSelectedText(null);
+        setSelectionRect(null);
+      }
+    };
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => document.removeEventListener('mouseup', handleMouseUp);
+  }, []);
 
-  const handleSendMessage = async (messageText, useSelectedText = false) => {
-    if (!messageText.trim()) return;
+  // Handles sending the message to the backend
+  const handleSendMessage = async (messageText) => {
+    if (!messageText.trim() || loading) return;
 
-    const newMessage = { id: Date.now(), sender: 'user', content: messageText };
-    setMessages((prevMessages) => [...prevMessages, newMessage]);
+    setMessages((prev) => [...prev, { id: Date.now(), sender: 'user', content: messageText }]);
     setLoading(true);
 
-    const body = { question: messageText };
-    if (useSelectedText && selectedText) {
-      body.selected_text = selectedText;
-    }
+    const payload = {
+      question: messageText,
+      selected_text: isContextPrimed ? selectedText : null,
+    };
 
     try {
       const response = await fetch('http://localhost:8000/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
-
       if (!response.ok) {
-        const errorData = await response.json(); // Attempt to read error detail from backend
-        throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `Backend error: ${response.status}`);
       }
-
       const data = await response.json();
-      const agentResponse = { id: Date.now() + 1, sender: 'agent', content: data.answer };
-      setMessages((prevMessages) => [...prevMessages, agentResponse]);
+      setMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'agent', content: data.answer }]);
     } catch (error) {
-      console.error('Error sending message:', error);
-      const errorMessage = {
-        id: Date.now() + 1,
-        sender: 'agent',
-        content: `Error: ${error.message}` || "Oops! Something went wrong. Please try again.",
-      };
-      setMessages((prevMessages) => [...prevMessages, errorMessage]);
+      setMessages((prev) => [...prev, { id: Date.now() + 1, sender: 'agent', content: `Sorry, an error occurred: ${error.message}` }]);
     } finally {
       setLoading(false);
-      setSelectedText(null); // Clear selected text after sending
+      setSelectedText(null);
       setSelectionRect(null);
+      setIsContextPrimed(false);
     }
   };
-
-  const handleAskAboutSelection = () => {
-    setIsOpen(true); // Open chat if not already open
-    handleSendMessage(selectedText, true); // Send selected text as the question
+  
+  // Primes the chat with the selected text when the floating button is clicked
+  const handlePrimeContext = () => {
+    if (!selectedText) return;
+    setIsContextPrimed(true);
+    setIsOpen(true);
   };
-
+  
+  // Clears the selected text indicator from the chat window
+  const clearSelection = () => {
+    setSelectedText(null);
+    setSelectionRect(null);
+    setIsContextPrimed(false);
+  }
 
   return (
-    <>
-      {isOpen && (
-        <div className="fixed bottom-24 right-8 z-[100]">
-          <ChatWindow messages={messages} onSendMessage={handleSendMessage} loading={loading} />
-        </div>
-      )}
-      {selectedText && selectionRect && (
+    <div className="chatbot-container">
+      {/* "Ask about selection" button - appears near the selected text */}
+      {selectedText && !isContextPrimed && (
         <FloatingActionButton
-          onClick={handleAskAboutSelection}
+          onClick={handlePrimeContext}
           style={{
-            position: 'absolute',
-            left: selectionRect.left,
-            top: selectionRect.top - 40, // Position above the selection
-            zIndex: 99, // Ensure it's above other content but below chatbot window
+            position: 'absolute', // Positioned relative to viewport via parent
+            left: `${selectionRect.left}px`,
+            top: `${selectionRect.top - 45}px`,
+            zIndex: 9998, // High z-index
           }}
         >
-          Ask about selection
+          Ask about this
         </FloatingActionButton>
       )}
-      <button
-        onClick={toggleChat}
-        className="fixed bottom-8 right-8 z-[101] w-16 h-16 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center text-3xl" // Ensure button is above chat window when closed
-        aria-label="Toggle Chat"
-      >
-        {isOpen ? 'X' : '💬'}
-      </button>
-    </>
+      
+      {/* Main Container for Chat Window and Toggle Button */}
+      <div className="fixed bottom-6 right-6 z-[9999]">
+        {/* Chat Window with smooth transitions */}
+        <div
+          className={`transition-all duration-300 ease-in-out mb-4 ${isOpen ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+        >
+          <ChatWindow
+              messages={messages}
+              onSendMessage={handleSendMessage}
+              loading={loading}
+              selectedText={isContextPrimed ? selectedText : null}
+              clearSelectedText={clearSelection}
+          />
+        </div>
+
+        {/* Main Chat Toggle Button */}
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-16 h-16 bg-blue-600 text-white rounded-full shadow-2xl flex items-center justify-center text-3xl hover:bg-blue-700 transition-all duration-200 transform hover:scale-110"
+          aria-label="Toggle Chat"
+        >
+          {isOpen ? <BsX size={32} /> : <BsChatDots size={28} />}
+        </button>
+      </div>
+    </div>
   );
 }

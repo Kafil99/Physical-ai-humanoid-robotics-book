@@ -1,32 +1,37 @@
 import React, { useState } from 'react';
+import { BsSend, BsArrowRepeat } from 'react-icons/bs';
 
+/**
+ * Renders the input field and send button at the bottom of the chat window.
+ */
 export default function ChatInput({ onSendMessage, loading }) {
   const [inputValue, setInputValue] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() || loading) return;
     onSendMessage(inputValue);
     setInputValue('');
   };
 
   return (
-    <form onSubmit={handleSubmit} className="p-4 bg-gray-100 rounded-b-lg">
-      <div className="flex">
+    <form onSubmit={handleSubmit} className="p-4 bg-white border-t border-gray-200 rounded-b-xl">
+      <div className="flex items-center gap-3">
         <input
           type="text"
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          placeholder="Type your message..."
-          className="flex-1 border rounded-l-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Ask a question..."
+          className="flex-1 w-full border-gray-300 rounded-lg p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition-shadow"
           disabled={loading}
         />
         <button
           type="submit"
-          className="bg-blue-600 text-white px-4 rounded-r-lg hover:bg-blue-700"
+          className="w-12 h-12 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
           disabled={loading}
+          aria-label="Send message"
         >
-          {loading ? '...' : 'Send'}
+          {loading ? <BsArrowRepeat className="animate-spin" size={20} /> : <BsSend size={18} />}
         </button>
       </div>
     </form>

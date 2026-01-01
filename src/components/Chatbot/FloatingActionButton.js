@@ -1,13 +1,16 @@
 import React from 'react';
 
-export default function FloatingActionButton({ onClick, children, style }) {
+/**
+ * Renders the small button that appears near selected text.
+ */
+export default function FloatingActionButton({ onClick, style }) {
   return (
     <button
       onClick={onClick}
-      className="absolute bg-blue-500 text-white text-xs px-2 py-1 rounded shadow-md hover:bg-blue-600 z-50"
+      className="absolute bg-gray-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-lg hover:bg-black transition-all"
       style={style}
     >
-      {children}
+      Ask about this
     </button>
   );
 }
