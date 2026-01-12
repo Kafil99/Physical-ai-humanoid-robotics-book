@@ -1,30 +1,34 @@
 # main.py
-import uvicorn
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from chatbot_api import router as chatbot_router
-
-# This script will contain the logic for the RAG content ingestion pipeline.
-
-import os
-import uuid
-import requests
-from bs4 import BeautifulSoup
+from pydantic import BaseModel
 import cohere
+from qdrant_client import QdrantClient
 from dotenv import load_dotenv
-from qdrant_client import QdrantClient, models
-import logging
 
-# --- FastAPI App Setup ---
+# Assume agents is an installed library based on the spec
+from agents import Agent, Runner, RunConfig, OpenAIChatCompletionsModel, AsyncOpenAI
+
+# Import functions from agent.py
+from agent import (
+    load_environment_variables,
+    get_cohere_client,
+    get_qdrant_client,
+    get_embedding,
+    search_qdrant,
+    format_retrieved_chunks,
+)
+
+# --- FastAPI App Initialization ---
 app = FastAPI()
 
-@app.get("/")
-def read_root():
-    return {"status": "online"}
-
-# Add CORS middleware to allow requests from the Docusaurus frontend
+# --- CORS Configuration ---
+# This allows the frontend to communicate with the backend
 origins = [
-    "http://localhost:3000",
+    "http://localhost:3000",  # Docusaurus default dev port
+    "http://localhost:3001",
+    "https://physical-ai-humanoid-robotics-book-pink-delta.vercel.app",
 ]
 
 app.add_middleware(
@@ -35,192 +39,89 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(chatbot_router, prefix="/api")
-
-# --- Logging Setup ---
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
 # --- Environment and Clients Setup ---
-load_dotenv()
+try:
+    load_environment_variables()
+except ValueError as e:
+    print(f"Error loading environment variables: {e}")
+    # Handle the error appropriately, maybe exit or use default fallbacks
+    # For now, we'll print the error and continue, but in production, you might want to stop
+    # if the application can't function without these variables.
 
-def init_cohere_client():
-    cohere_api_key = os.getenv("COHERE_API_KEY")
-    if not cohere_api_key:
-        logging.error("COHERE_API_KEY environment variable not set.")
-        raise ValueError("COHERE_API_KEY is required.")
-    return cohere.Client(cohere_api_key)
+# Initialize clients once at startup
+cohere_client = get_cohere_client()
+qdrant_client = get_qdrant_client()
+collection_name = os.getenv("QDRANT_COLLECTION_NAME")
 
-def init_qdrant_client():
-    qdrant_api_key = os.getenv("QDRANT_API_KEY")
-    qdrant_url = os.getenv("QDRANT_URL")
-    if not qdrant_api_key or not qdrant_url:
-        logging.error("QDRANT_API_KEY or QDRANT_URL environment variable not set.")
-        raise ValueError("QDRANT_API_KEY and QDRANT_URL are required.")
-    return QdrantClient(api_key=qdrant_api_key, url=qdrant_url)
+# OpenRouter client for the LLM
+openrouter_client = AsyncOpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.getenv("OPENROUTER_API_KEY")
+)
 
-DOCUSAURUS_BASE_URL = "https://physical-ai-humanoid-robotics-book-pink-delta.vercel.app"
+# LLM Model
+model = OpenAIChatCompletionsModel(
+    model="mistralai/devstral-2512:free",
+    openai_client=openrouter_client
+)
 
-def get_all_urls(sitemap_url: str) -> list[str]:
+# --- API Models ---
+from schemas import ChatRequest, ChatResponse
+
+# --- Agent Instructions ---
+instructions = (
+    "You are a RAG assistant. Answer ONLY from the provided context.\n"
+    "If the answer is not present, say: I don't know.\n"
+    "Cite document numbers in your answer when possible."
+)
+
+# --- FastAPI Endpoints ---
+@app.post("/chat", response_model=ChatResponse)
+async def chat_endpoint(request: ChatRequest):
     """
-    Parses a sitemap.xml file and returns a list of all URLs.
+    Handles chat requests, supporting both global RAG and selected text modes.
     """
-    urls = []
-    try:
-        response = requests.get(sitemap_url, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, "xml")
-        locs = soup.find_all("loc")
-        for loc in locs:
-            # Replace placeholder URL with the actual deployed base URL
-            corrected_url = loc.text.replace("https://your-docusaurus-site.example.com", DOCUSAURUS_BASE_URL)
-            urls.append(corrected_url)
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching sitemap: {e}")
-    return urls
-
-def extract_text_from_url(url: str) -> str:
-    """
-    Downloads HTML from a URL and extracts clean text from the <article> tag.
-    """
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.content, "html.parser")
-        article = soup.find("article")
-        if article:
-            return article.get_text(separator=" ", strip=True)
-    except requests.exceptions.RequestException as e:
-        logging.error(f"Error fetching URL {url}: {e}")
-    return ""
-
-def chunk_text(text: str, chunk_size: int = 2000, overlap: int = 400) -> list[str]:
-    """
-    Splits a text into fixed-size chunks with overlap.
-    """
-    if not text:
-        return []
-    chunks = []
-    start = 0
-    while start < len(text):
-        end = start + chunk_size
-        chunks.append(text[start:end])
-        start += chunk_size - overlap
-    return chunks
-
-def embed(co_client: cohere.Client, chunks: list[str]) -> list[list[float]]:
-    """
-    Generates embeddings for a list of text chunks using the Cohere API.
-    """
-    if not chunks:
-        return []
-    try:
-        response = co_client.embed(
-            texts=chunks,
-            model="embed-english-v3.0",
-            input_type="search_document"
-        )
-        return response.embeddings
-    except cohere.CohereError as e:
-        logging.error(f"Cohere API error during embedding: {e}")
-        return []
-
-def create_collection(qd_client: QdrantClient, collection_name: str):
-    """
-    Creates a collection in Qdrant if it does not already exist.
-    If it exists, it will delete and recreate it to ensure a clean state as per spec.
-    """
-    try:
-        if qd_client.collection_exists(collection_name=collection_name):
-            logging.info(f"Collection '{collection_name}' already exists. Deleting and recreating...")
-            qd_client.delete_collection(collection_name=collection_name)
-        
-        qd_client.create_collection(
-            collection_name=collection_name,
-            vectors_config=models.VectorParams(size=1024, distance=models.Distance.COSINE),
-        )
-        logging.info(f"Collection '{collection_name}' created successfully.")
-    except Exception as e:
-        logging.error(f"Error creating Qdrant collection: {e}")
-        raise
-
-def save_chunks_to_qdrant(qd_client: QdrantClient, collection_name: str, chunks: list[str], embeddings: list[list[float]], source_url: str):
-    """
-    Saves chunks and their embeddings to Qdrant.
-    """
-    if not chunks or not embeddings:
-        return
-
-    try:
-        qd_client.upsert(
-            collection_name=collection_name,
-            points=[
-                models.PointStruct(
-                    id=str(uuid.uuid4()),
-                    vector=embeddings[i],
-                    payload={"text": chunk, "source_url": source_url, "chunk_index": i}
-                ) for i, chunk in enumerate(chunks)
-            ],
-            wait=True
-        )
-        logging.info(f"Saved {len(chunks)} chunks to collection '{collection_name}'.")
-    except Exception as e:
-        logging.error(f"Error saving chunks to Qdrant: {e}")
-
-def run_ingestion():
-    """Main function to orchestrate the ingestion pipeline."""
-    logging.info("RAG Content Ingestion Pipeline Started")
-    SITEMAP_URL = "https://physical-ai-humanoid-robotics-book-pink-delta.vercel.app/sitemap.xml"
-    COLLECTION_NAME = "rag_embedding"
-
-    try:
-        co_client = init_cohere_client()
-        qd_client = init_qdrant_client()
-    except ValueError as e:
-        logging.critical(f"Client initialization failed: {e}")
-        return
-
-    all_urls = get_all_urls(SITEMAP_URL)
-    logging.info(f"Found {len(all_urls)} URLs in the sitemap.")
-    if not all_urls:
-        logging.warning("No URLs found. Exiting.")
-        return
-
-    try:
-        create_collection(qd_client, COLLECTION_NAME)
-    except Exception:
-        logging.critical("Failed to create Qdrant collection. Aborting.")
-        return
-
-    for url in all_urls:
-        logging.info(f"--- Processing URL: {url} ---")
-        
-        text = extract_text_from_url(url)
-        if not text:
-            logging.warning(f"No content found for {url}, skipping.")
-            continue
-        logging.info(f"Extracted {len(text)} characters.")
-
-        chunks = chunk_text(text)
-        logging.info(f"Created {len(chunks)} chunks.")
-        if not chunks:
-            continue
-
-        embeddings = embed(co_client, chunks)
-        if not embeddings:
-            logging.warning(f"Failed to generate embeddings for {url}, skipping.")
-            continue
-        logging.info(f"Generated {len(embeddings)} embeddings.")
-        
-        save_chunks_to_qdrant(qd_client, COLLECTION_NAME, chunks, embeddings, url)
-
-    logging.info("--- Ingestion complete! ---")
-
-if __name__ == "__main__":
-    # This block allows running the ingestion script directly
-    # e.g., `python backend/main.py ingest`
-    import sys
-    if len(sys.argv) > 1 and sys.argv[1] == "ingest":
-        run_ingestion()
+    context = ""
+    
+    if request.selected_text:
+        # 2. Selected Text Mode (Strict Context Mode)
+        context = f"Document 1:\n{request.selected_text}\n"
     else:
-        # This will run the FastAPI app
-        uvicorn.run(app, host="0.0.0.0", port=8000)
+        # 1. Global Book RAG Mode (Default)
+        # Embed the user's question
+        query_embedding = get_embedding(request.question, cohere_client)
+
+        # Retrieve relevant context from Qdrant
+        search_results = search_qdrant(query_embedding, qdrant_client, collection_name)
+        
+        context = format_retrieved_chunks(search_results)
+
+    if not context.strip():
+        return ChatResponse(answer="I don't know. No relevant information found.")
+
+    # Create the agent
+    agent = Agent(
+        name="RAG_Agent",
+        model=model,
+        instructions=instructions
+    )
+    
+    # Prepare the input for the agent
+    user_input = f"Context:\n{context}\n\nQuestion: {request.question}"
+
+    # Run the agent asynchronously as per the spec
+    try:
+        # The spec requires `await Runner.run(...)`
+        result = await Runner.run(agent, user_input)
+        answer = result.final_output
+    except Exception as e:
+        # Handle potential errors during agent execution
+        print(f"Error during agent execution: {e}")
+        # As per the spec, handle errors gracefully without crashing
+        return ChatResponse(answer="An error occurred while processing your request.")
+
+    return ChatResponse(answer=answer)
+
+@app.get("/")
+def read_root():
+    return {"message": "FastAPI server for the RAG agent is running."}

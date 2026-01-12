@@ -1,25 +1,21 @@
+// src/clientModules/chatbot.js
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import ChatContainer from '@site/src/components/Chatbot/ChatContainer';
+import ExecutionEnvironment from '@docusaurus/ExecutionEnvironment';
+import Chatbot from '../components/Chatbot';
+import './chatbot.css';
 
-/**
- * This client module creates a dedicated DOM node outside of Docusaurus's main
- * React tree to ensure the chatbot is not affected by parent CSS stacking contexts.
- * This is the definitive fix for the "chatbot under footer" issue.
- */
-export default (function () {
-  if (typeof window === 'undefined') {
-    return null;
-  }
+if (ExecutionEnvironment.canUseDOM) {
+    const chatbotContainer = document.createElement('div');
+    chatbotContainer.id = 'chatbot-container';
+    document.body.appendChild(chatbotContainer);
 
-  // Create a dedicated root element for the chatbot
-  const chatbotRootEl = document.createElement('div');
-  chatbotRootEl.id = 'chatbot-root-container';
-  document.body.appendChild(chatbotRootEl);
+    const root = createRoot(chatbotContainer);
+    root.render(<Chatbot />);
 
-  // Use createRoot to render the chatbot into the isolated element
-  const root = createRoot(chatbotRootEl);
-  root.render(<ChatContainer />);
-
-  return null;
-})();
+    // Add Google Icons link to head
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@48,400,0,0';
+    document.head.appendChild(link);
+}

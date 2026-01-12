@@ -18,10 +18,6 @@ const config = {
   // For GitHub pages deployment, it is often '/<projectName>/'
   baseUrl: '/',
 
-  clientModules: [
-    require.resolve('./src/clientModules/chatbot.js'),
-  ],
-
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'facebook', // Usually your GitHub org/user name.
@@ -67,6 +63,7 @@ const config = {
         theme: {
           customCss: './src/css/custom.css',
         },
+
       }),
     ],
   ],
@@ -166,6 +163,7 @@ const config = {
       },
     ],
   },
+  clientModules: [require.resolve('./src/clientModules/chatbot.js')],
 };
 
 export default config;

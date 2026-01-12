@@ -206,12 +206,5 @@ Wait for consent; never auto-create ADRs. Group related decisions (stacks, authe
 - `history/adr/` — Architecture Decision Records
 - `.specify/` — SpecKit Plus templates and scripts
 
-## Technology Stack
-
-- **FastAPI**: Backend framework for building APIs.
-- **Tailwind CSS**: Frontend CSS framework for styling.
-- **Docusaurus**: Frontend framework for documentation.
-- **React**: Frontend library for building user interfaces.
-
 ## Code Standards
 See `.specify/memory/constitution.md` for code quality, testing, performance, security, and architecture principles.
